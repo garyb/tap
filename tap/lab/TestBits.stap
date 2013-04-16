@@ -1,0 +1,248 @@
+(module TestBits)
+
+; -----------------------------------------------------------------------------
+;  Rank-2 polymorphism
+; -----------------------------------------------------------------------------
+
+; (def fun (-> (forall a (-> a a)) '(Number String)))
+; (let fun (lambda (f) (f '((f 5) (f "Foo")))))
+
+; -----------------------------------------------------------------------------
+;  Typeclass inlining test stuff
+; -----------------------------------------------------------------------------
+
+; (let testOrd1 (lambda (x y)
+  ; (or (< x y) (== x y))))
+  
+; (let testOrd2 (lambda (x)
+  ; (let a '(x 5))
+  ; (let b '(x 10))
+  ; (and (< a b) (> a b))))
+  
+  
+; (class X (a)
+  ; (def doX (-> a a Bool)))
+
+; (class Y (=> (X a)) (a)
+  ; (def doY (-> a a Bool)))
+
+; (instance X (=> (X a) (X b)) ('(a b))
+  ; (let doX (lambda (t1 t2)
+    ; (match '(t1 t2)
+      ; (case '('(a1 b1) '(a2 b2)) (and (doX a1 a2) (doX b1 b2)))))))
+
+; (instance Y (=> (Y p)) ('(p q))
+  ; (let doY (lambda (t1 t2)
+    ; (match '(t1 t2)
+      ; (case '('(p1 _) '(p2 _)) (doY p1 p2))))))
+      
+(data What (X (forall (a) a)))
+
+; (def x (-> (forall (a) a) String))
+; (let x (lambda (z) "foo"))
+      
+; (class E (a)
+  ; (def doE (-> a Bool)))
+  
+; (instance E (String)
+  ; (let doE (lambda (x) False)))
+  
+; (instance E (=> (E a) (E b)) ((Tuple2 a b))
+  ; (let doE (lambda (x) False)))
+      
+; (class X (a)
+  ; (def doX (-> a Bool)))
+  
+; (class Y (a)
+  ; (def doY (-> a Bool)))
+  
+; (instance X (=> (Y a)) ((List a))
+  ; (let doX (lambda (a) False)))
+  
+; (instance Y (=> (X a)) ((List a))
+  ; (let doY (lambda (a) False)))
+
+; -----------------------------------------------------------------------------
+;  Typeclass members with additional predicates
+; -----------------------------------------------------------------------------
+
+; (class Ohno (a)
+  ; (def ohno (=> (Eq b) (-> a b String))))
+  
+; (instance Ohno ((List a))
+  ; (let ohno (lambda (xs z)
+    ; ; TODO: typing fails with this present at the moment,
+    ; ; instance member type is missing the (Eq b) context from the tc def
+    ; ; (== z z)
+    ; "foo")))
+
+; -----------------------------------------------------------------------------
+;  Typeclass superclass arity etc
+; -----------------------------------------------------------------------------
+
+; (class Base (a)
+  ; (def base (-> a a)))
+  
+; (instance Base (Number)
+  ; (let base (lambda (x) x)))
+  
+; (class Sub (=> (Base q) p q)
+  ; (def sub (-> p q p)))
+  
+; (instance Sub (Number Number)
+  ; (let sub (lambda (x y) x)))
+  
+; (let run-dat (lambda (x)
+  ; (base x)
+  ; (sub 10 x)))
+
+; -----------------------------------------------------------------------------
+
+; No idea what most of this does, it's from when I was working on typeclass 
+; inlining most likely, but there may be stuff in here worth looking at again.
+
+; (let x-mzero-maybe (cast mzero (Maybe a)))
+
+; (let z-eq-test (lambda (x y)
+  ; (== x y)))
+
+; (let xsnap-snap-snap 
+  ; (begin (trace "test")
+    ; (xsnap '(False False))))
+    
+; (let xsnap-city (lambda (x y z)
+  ; (zz '(x y) '(x y))
+  ; (show z)))
+  
+; Looks like we might need to introduce a lambda around things like this.
+; Currently gets changed to (== †v1), but †v1 isn't in scope.
+; (let zz ==)
+  
+  
+; (let zzx-snap (lambda (b c) 
+  ; (xsnap-city True b c)))
+  
+; (let zz-test (lambda (x y)
+  ; (show x)
+  ; (lambda (p q) 
+    ; (and (== x y) (== p q)))))
+    
+;(let zzz-test (lambda (x y)
+;  (< x x)
+;  ;(< y y)
+;  ;(== x y)
+;  (== '(x y) '(x y))
+;  ))
+    
+    
+; (let zzz-hmm (lambda (x) (show '(9 x))))
+
+
+; (data (State s a) (State (-> s '(a s))))
+
+; (class Test (a)
+  ; (def something (-> b c a d a)))
+  
+; (instance Test ((List a))
+  ; (let something (lambda (x z y d) y)))
+
+; (instance Monad ((State s)) 
+  ; (let return (lambda (x) (State (lambda (s) '(x s)))))
+    
+  ; (let >>= (lambda (sh f)
+    ; (match sh (case (State h) 
+      ; (State (lambda (s)
+        ; (match (h s) (case '(a newState)
+          ; (match (f a) (case (State g) (g newState)))))))))))
+        
+   ; (let fail (lambda (x) (error "die"))))
+   
+
+; TODO: fix this -- instance typing problem again, reordering the tvs - need to 
+; look in the predicates and start renumbering from there, rather than starting
+; with the first tvar found in the type
+
+; (class Test2 (a)
+  ; (def zz-fooz (-> b a a))
+  ; (def zz-zoof (-> a a))
+  ; )
+  
+; (instance Test2 (=> (Show q)) ('(p q))
+  ; (let zz-fooz (lambda (x y) 
+    ; (match y (case '(a b) (show b))) 
+    ; y))
+  ; (let zz-zoof (lambda (x) x))  
+  ; )
+    
+; (def fooz2 (=> (Show q) (-> b '(p q) '(p q))))
+; (let fooz2 (lambda (x y) 
+    ; (match y (case '(a b) (show b))) 
+    ; y))
+  
+; (let zzzz-foozle [1 2 3 4 5])
+
+; (let zzz (lambda (x y)
+  ; (var q x)
+  ; (set! q (+ x y))))
+  
+; (let zzzTestVal (== False False))
+; (let zzzTestVal2 (var q False))
+; (let zzzTestVal3 (begin
+  ; (var q False)
+  ; (== False True)
+; ))
+
+; (let zzzTestVal4 zzzTestVal)
+
+; -----------------------------------------------------------------------------
+;  Interpreter test
+; -----------------------------------------------------------------------------
+
+; (let main '(1 2 3))
+
+; -----------------------------------------------------------------------------
+;  TC inlining test
+; -----------------------------------------------------------------------------
+
+; (((fn 1) 2) 3)
+
+; vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+; (let fn (lambda (x) (if False 20 (error "twenty"))))
+
+; (class Boolify (a)
+  ; (def boolify (-> b a Bool)))
+; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  
+; (data (TCBoolify v0)
+      ; (TCBoolify (forall v1 (-> v1 v0 Bool))))
+      
+; (let boolify (lambda (a b c) (match b (case (TCBoolify d) (d a c)))))
+  
+; Prelude.TCTest :: (Prelude.TCBoolify v0) -> (forall v1 (v0 -> v0 -> v1 -> Prelude.Bool)) -> (Prelude.TCTest v0) 
+  
+  
+; Prelude.test :: (Prelude.TCTest v0) -> v0 -> v0 -> v1 -> Prelude.Bool 
+                ; (lambda (a b c d) (match a (case (Prelude.TCTest _ e) (e b c d)))) 
+  
+; vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+; (instance Boolify (Bool) 
+  ; (let boolify (lambda (z b) z b)))
+; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  
+; (instance Boolify (=> (Boolify b)) ('(a b))
+  ; (let boolify (lambda (q t)
+    ; (match t (case '(x1 x2) (boolify q x2))))))
+
+; vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+; (class Test (=> (Boolify a) a)
+  ; (def test (-> a a c Bool))
+;  (let test (lambda (x y c) (and (boolify x x) (boolify y y))))
+  ; (let test (lambda (x y c) (boolify x x)))
+  ; )
+; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  
+; (instance Test (Bool))
+
+; (instance Test (=> (Boolify q)) ('(p q)))
+    
+; (let zzz (test '(7 True) '(7 True)))
