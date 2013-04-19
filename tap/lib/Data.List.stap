@@ -1,0 +1,117 @@
+(module Data.List)
+
+; -----------------------------------------------------------------------------
+; - List properties -----------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+; Get the first element of `xs`. Raises a runtime error if the list is empty.
+(def head (-> (List a) a))
+(let head (lambda (xs)
+  (match xs (case (: x xs) x)
+            (case EOL (error "List is empty")))))
+
+; Get all the elements of `xs` after the first. . Raises a runtime error if the
+; list is empty.
+(def tail (-> (List a) (List a)))
+(let tail (lambda (xs)
+  (match xs (case (: x xs) xs)
+            (case EOL (error "List is empty")))))
+
+; Get the last element of `xs`. Raises a runtime error if the list is empty.
+(def last (-> (List a) a))
+(let last (lambda (xs)
+  (match xs (case (: x EOL) x)
+            (case (: _ xs) (last xs))
+            (case EOL (error "List is empty")))))
+
+; Get all the elements of `xs` before the last. Raises a runtime error if the 
+; list is empty.
+(def init (-> (List a) (List a)))
+(let init (lambda (xs)
+  (match xs (case (: x EOL) EOL)
+            (case (: x xs) (: x (init xs)))
+            (case EOL (error "List is empty")))))
+    
+; Reverses the order of `xs`.
+(def reverse (-> (List a) (List a)))
+(let reverse (foldl (flip :) EOL))
+
+; -----------------------------------------------------------------------------
+; - Iteration -----------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+; Applies `f` to each value in `xs` and discards the result.
+; (def foreach (-> (-> a b) (List a) Unit))
+(let foreach (lambda (f xs)
+  (map f xs) Unit))
+
+; -----------------------------------------------------------------------------
+; - List transforms -----------------------------------------------------------
+; -----------------------------------------------------------------------------
+  
+; Creates a new list with the result of applying f to each value of list, if f returns Some the 
+; value is kept, if it returns None the value is filtered out.
+(def collect (-> (-> a (Maybe b)) (List a) (List b)))
+(let collect (lambda (f xs)
+  (match xs (case EOL EOL)
+            (case (: x xs) (match (f x) (case (Some x) (: x (collect f xs)))
+                                        (case None (collect f xs)))))))
+
+; Takes a binary operator, a start value (used as the initial left side of the 
+; operator), and a list, reduces the list from left to right using the operator.
+(def foldl (-> (-> b a b) b (List a) b))
+(let foldl (lambda (f v xs)
+  (match xs (case EOL v)
+            (case (: x xs) (foldl f (f v x) xs)))))
+
+; Takes a binary operator and reduces the list from left to right. The list
+; must not be empty.
+(def reducel (-> (-> a a a) (List a) a))
+(let reducel (lambda (f xs)
+  (match xs (case EOL (error "reducel on an empty list"))
+            (case (: x xs) (foldl f x xs)))))
+
+; Takes a binary operator, a start value (used as the initial right side of the 
+; operator), and a list, reduces the list from right to left using the operator.
+(def foldr (-> (-> a b b) b (List a) b))
+(let foldr (lambda (f v xs)
+  (match xs (case EOL v)
+            (case (: x xs) (f x (foldr f v xs))))))
+
+; Takes a binary operator and reduces the list from right to left. The list
+; must not be empty.
+(def reducer (-> (-> a a a) (List a) a))
+(let reducer (lambda (f xs)
+  (match xs (case EOL (error "reducer on an empty list"))
+            (case (: x xs) (foldr f x xs)))))
+
+; -----------------------------------------------------------------------------
+; - List predicating ----------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+; Creates a list that contains all the items that pred returns true for.
+(def filter (-> (-> a Bool) (List a) (List a)))
+(let filter (lambda (pred xs)
+  (match xs (case EOL EOL)
+            (case (: x xs) (if (pred x) (: x (filter pred xs))
+                                (filter pred xs))))))
+
+; Checks whether a predicate is true for any item in a list.
+(def any (-> (-> a Bool) (List a) Bool))
+(let any (lambda (pred xs)
+  (match xs (case EOL False)
+            (case (: x xs) (or (pred x) (any pred xs))))))
+
+; Checks whether a predicate is true for all items in a list.
+(def all (-> (-> a Bool) (List a) Bool))   
+(let all (lambda (pred xs)
+  (match xs (case EOL False)
+            (case (: x xs) (and (pred x) (all pred xs))))))
+
+; Takes a predicate and a list and returns the first item the predicate is true for, or None if
+; the predicate fails for every item in the list.
+(def find (-> (-> a Bool) (List a) (Maybe a)))
+(let find (lambda (pred xs)
+  (match xs (case EOL None)
+            (case (: x xs) (if (pred x) (Some x)
+                                        (find pred xs))))))

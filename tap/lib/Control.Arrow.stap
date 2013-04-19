@@ -1,0 +1,19 @@
+(module Control.Arrow)
+
+; -----------------------------------------------------------------------------
+; - Arrows --------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Arrow (=> (Category a)) (a)
+
+  (def arr (-> (-> b c) (a b c)))
+  (def first (-> (a b c) (a '(b d) '(c d))))
+  
+  (def second (-> (a b c) (a '(d b) '(d c))))
+  (let second (lambda (f) (>>> (>>> (arr swap) (first f)) (arr swap))))
+  
+  (def *** (-> (a b c) (a b1 c1) (a '(b b1) '(c c1))))
+  (let *** (lambda (f g) (>>> (first f) (second g))))
+  
+  (def &&& (-> (a b c) (a b c1) (a b '(c c1))))
+  (let &&& (lambda (f g) (>>> (arr (lambda (b) '(b b))) (*** f g)))))

@@ -1,0 +1,44 @@
+(module Control.Monad)
+
+(import Data.List)
+
+; -----------------------------------------------------------------------------
+; - Monads --------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Monad (m)
+  (def return (-> a (m a)))
+  (def >>= (-> (m a) (-> a (m b)) (m b)))
+  (def >> (-> (m a) (m b) (m b)))
+  (def fail (-> String (m a)))
+  (let >> (lambda (m k) (>>= m (lambda (_) k)))))
+  
+(instance Monad (Maybe)
+  (let return Some)
+  (let >>= (lambda (x k)
+    (match x
+      (case (Some x) (k x))
+      (case None None))))
+  (let fail (lambda (x) None)))
+  
+(instance Monad (List)
+  (let >>= (lambda (m k) (foldr (. + k) EOL m)))
+  (let return (lambda (x) (: x EOL)))
+  (let fail (lambda (x) EOL)))
+  
+; -----------------------------------------------------------------------------
+  
+(class MonadPlus (=> (Monad m)) (m)
+  (def mzero (m a))
+  (def mplus (-> (m a) (m a) (m a))))
+
+(instance MonadPlus (List)
+  (let mzero EOL)
+  (let mplus +))
+
+(instance MonadPlus (Maybe)
+  (let mzero None)
+  (let mplus (lambda (xs ys)
+    (match xs
+      (case None ys)
+      (case xs xs)))))

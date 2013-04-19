@@ -1,0 +1,103 @@
+(module Prelude)
+
+(import Control.Category)
+(import Data.Tuple)
+(import Data.Eq)
+(import Data.Ord)
+(import Data.Maybe)
+(import Data.Functor)
+
+(export (module Control.Category))
+(export (module Data.Tuple))
+(export (module Data.Eq))
+(export (module Data.Ord))
+(export (module Data.Maybe))
+(export (module Data.Functor))
+
+; -----------------------------------------------------------------------------
+; - Native data types ---------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(data Number)
+(data String)
+
+; -----------------------------------------------------------------------------
+; - Basic data types ----------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(data Unit Unit)
+(data Bool True False)
+(data (List a) (: a (List a)) EOL)
+
+; -----------------------------------------------------------------------------
+; - Functions -----------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(def flip (-> (-> a b c) b a c))
+(let flip (lambda (f x y) (f y x)))
+
+(def not (-> Bool Bool))
+(let not (lambda (b) (if b False True)))
+
+; -----------------------------------------------------------------------------
+; - Number-like ---------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Num (=> (Plus a) (Ord a)) (a)
+  (def - (-> a a a))
+  (def / (-> a a a))
+  (def * (-> a a a))
+  (def mod (-> a a a))
+  (def negate (-> a a)))
+
+(instance Num (Number)
+  (let - native)
+  (let / native)
+  (let * native)
+  (let mod native)
+  (let negate native))
+  
+; -----------------------------------------------------------------------------
+; - Plus ----------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Plus (a)
+ (def + (-> a a a)))
+
+(instance Plus (Number)
+  (let + native))
+
+(instance Plus (String)
+  (let + native))
+  
+(instance Plus ((List a))
+  (let + (lambda (xs ys)
+    (match '(xs ys)
+      (case '(EOL ys) ys)
+      (case '((: x xs) ys) (: x (+ xs ys)))))))
+
+; -----------------------------------------------------------------------------
+; - Size ----------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Size (a)
+  (def size (-> a Number))
+  (def empty? (-> a Bool))
+  (let empty? (lambda (x) (> (size x) 0))))
+
+(instance Size (Number)
+  (let size identity))
+
+(instance Size ((List a))
+  (let size (lambda (xs)
+    (let loop (lambda (n xs)
+      (match xs (case EOL n)
+                (case (: _ xs) (loop (+ n 1) xs)))))
+    (loop 0 xs))))
+           
+; -----------------------------------------------------------------------------
+; - Global console output functions -------------------------------------------
+; -----------------------------------------------------------------------------
+
+(def write-to-console (-> String Unit))
+(let write-to-console native)

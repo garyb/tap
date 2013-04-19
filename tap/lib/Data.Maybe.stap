@@ -1,0 +1,22 @@
+(module Data.Maybe)
+
+; -----------------------------------------------------------------------------
+; - Maybe ---------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(data (Maybe a) (Some a) None)
+
+(let from-maybe (lambda (d x)
+  (match x
+    (case (Some v) v)
+    (case None d))))
+
+(let maybe-to-list (lambda (x)
+  (match x
+    (case (Some x) (: x EOL))
+    (case None EOL))))
+
+(let list-to-maybe (lambda (l)
+  (match l
+    (case (: x xs) (Some x))
+    (case EOL None))))

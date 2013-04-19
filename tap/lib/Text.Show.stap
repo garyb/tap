@@ -1,0 +1,27 @@
+(module Text.Show)
+
+; -----------------------------------------------------------------------------
+; - Show ----------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Show (a)
+  (def show (-> a String)))
+
+(instance Show (Number)
+  (let show native))
+
+(instance Show (String)
+  (let show identity))
+  
+(instance Show (=> (Show a) (Show b)) ('(a b))
+  (let show (lambda (x) 
+    (match x (case '(a b) (+ (+ "'(" (+ (+ (show a) " ") (show b))) ")"))))))
+
+(instance Show (=> (Show a)) ((List a))
+  (let show (lambda (xs)
+    (match xs (case EOL "")
+              (case (: x EOL) (show x))
+              (case (: x xs) (+ (+ (show x) " ") (show xs)))))))
+              
+(def trace (=> (Show m) (-> m Unit)))
+(let trace (lambda (m) (write-to-console (show m))))

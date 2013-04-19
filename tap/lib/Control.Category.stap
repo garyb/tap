@@ -1,0 +1,19 @@
+(module Control.Category)
+
+; -----------------------------------------------------------------------------
+; - Categories ----------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Category (cat)
+  (def identity (cat a a))
+  (def . (-> (cat b c) (cat a b) (cat a c))))
+  
+(instance Category (->)
+  (let identity (lambda (f) f))
+  (let . (lambda (f g x) (f (g x)))))
+
+(def <<< (=> (Category cat) (-> (cat b c) (cat a b) (cat a c))))
+(let <<< .)
+
+(def >>> (=> (Category cat) (-> (cat a b) (cat b c) (cat a c))))
+(let >>> (flip .))

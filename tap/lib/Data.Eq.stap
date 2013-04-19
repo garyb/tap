@@ -1,0 +1,46 @@
+(module Data.Eq)
+
+; -----------------------------------------------------------------------------
+; - Equality ------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Eq (a)
+  (def == (-> a a Bool))
+  (let == (lambda (x y) (not (!= x y))))
+  (def != (-> a a Bool))
+  (let != (lambda (x y) (not (== x y)))))
+
+(instance Eq (Number)
+  (let == native))
+
+(instance Eq (String)
+  (let == native))
+
+(instance Eq (Unit)
+  (let == (lambda (x y) True)))
+
+(instance Eq (Bool)
+  (let == (lambda (x y)
+    (match '(x y)
+      (case '(True True) True)
+      (case '(False False) True)
+      (case _ False)))))
+
+(instance Eq (=> (Eq a)) ((List a))
+  (let == (lambda (lx ly)
+    (match '(lx ly)
+      (case '(EOL EOL) True)
+      (case '((: x xs) (: y ys)) (and (== x y) (== xs ys)))
+      (case _ False)))))
+
+(instance Eq (=> (Eq a) (Eq b)) ('(a b))
+  (let == (lambda (tx ty)
+    (match '(tx ty)
+      (case '('(x y) '(x' y')) (and (== x x') (== y y')))
+      (case _ False)))))
+    
+(instance Eq (=> (Eq a) (Eq b) (Eq c)) ('(a b c))
+  (let == (lambda (tx ty)
+    (match '(tx ty)
+      (case '('(x y z) '(x' y' z')) (and (== x x') (== y y') (== z z')))
+      (case _ False)))))

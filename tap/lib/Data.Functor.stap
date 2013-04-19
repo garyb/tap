@@ -1,0 +1,20 @@
+(module Data.Functor)
+
+; -----------------------------------------------------------------------------
+; - Functors ------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Functor (f)
+  (def map (-> (-> a b) (f a) (f b))))
+
+(instance Functor (List)
+  (let map (lambda (f xs)
+    (match xs
+      (case EOL EOL)
+      (case (: x xs) (: (f x) (map f xs)))))))
+
+(instance Functor (Maybe)
+  (let map (lambda (f x)
+    (match x
+      (case None None)
+      (case (Some x) (Some (f x)))))))

@@ -1,0 +1,25 @@
+(module Data.Monoid)
+
+(import Data.List)
+
+; -----------------------------------------------------------------------------
+; - Monoids -------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(class Monoid (a)
+  (def empty a)
+  (def append (-> a a a))
+  (def concat (-> (List a) a))
+  (let concat (foldr append empty)))
+  
+(instance Monoid ((List a))
+  (let empty EOL)
+  (let append +))
+  
+(instance Monoid (=> (Monoid a)) ((Maybe a))
+  (let empty None)
+  (let append (lambda (x y)
+    (match '(x y) 
+      (case '(None y) y)
+      (case '(x None) x)
+      (case '((Some x) (Some y)) (Some (append x y)))))))

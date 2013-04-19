@@ -1,0 +1,39 @@
+(module Data.Ord)
+
+; -----------------------------------------------------------------------------
+; - Ordinals ------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+
+(data Ordering GT LT EQ)
+
+(class Ord (=> (Eq a)) (a)
+
+  (def >  (-> a a Bool))
+  (def <  (-> a a Bool))
+
+  (def >= (-> a a Bool))
+  (let >= (lambda (x y) (or (== x y) (> x y))))
+
+  (def <= (-> a a Bool))
+  (let <= (lambda (x y) (or (== x y) (< x y))))
+
+  (def compare (-> a a Ordering))
+  (let compare (lambda (x y) (if (== x y) EQ (if (< x y) LT GT)))))
+
+(instance Ord (Number)
+  (let > native)
+  (let < native))
+  
+(instance Ord (String)
+  (let > native)
+  (let < native))  
+  
+(instance Ord (=> (Ord p) (Eq q)) ('(p q))
+  
+  (let > (lambda (x y)
+    (match '(x y)
+      (case '('(x1 _) '(y1 _)) (> x1 y1)))))
+      
+  (let < (lambda (x y)
+    (match '(x y)
+      (case '('(x1 _) '(y1 _)) (< x1 y1))))))
