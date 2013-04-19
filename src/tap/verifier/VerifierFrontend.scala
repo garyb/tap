@@ -8,7 +8,7 @@ import tap.types.Type
 import tap.types.classes.Qual
 import tap.types.inference.TypeInference.ExprTypeMap
 import tap.types.inference.Substitutions.Subst
-import tap.util.{GraphUtil, trace}
+import tap.util.{Graph, trace}
 import tap.verifier.defs._
 import tap.verifier.errors._
 import tools.nsc.io.File
@@ -39,7 +39,7 @@ object VerifierFrontend {
 		}
 
 		// Sort and modules into dependency order, grouping together modules that have circular dependencies
-		val (ord, _) = GraphUtil.getSCCOrder(deps, Set.empty)
+		val ord = Graph.components(deps)
 
 		// Construct the lookup table each module for resolving fully qualified ids from local ids
 		val scopeMaps = deps map { case (mId, imports) =>

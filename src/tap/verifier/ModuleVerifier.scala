@@ -10,7 +10,7 @@ import tap.types.classes.{TypeclassDef, Qual, IsIn}
 import tap.types.inference.Substitutions
 import tap.types.kinds.Kind._
 import tap.types.kinds._
-import tap.util.{Graph, GraphUtil}
+import tap.util.{trace, Graph}
 import tap.util.PrettyPrint._
 import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
 import tap.verifier.errors._
@@ -55,11 +55,15 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 
 		// Find the type constructor dependencies
 		val tconDeps = dtASTs map { case (id @ ModuleId(mId, _), ASTDataTypeDefinition(_, _, dcons)) =>
-			id -> (dcons flatMap { dcon => ASTUtil.findAllTypeConstructors(scopes(mId).tcons, dcon.args) })
+			id -> (dcons flatMap { dcon =>
+				val tcons = ASTUtil.findAllTypeConstructors(scopes(mId).tcons, dcon.args)
+				// Exclude dependencies that have already been resolved
+				tcons filterNot { d => defs.tcons contains d }
+			})
 		}
 
 		// Type constructors can have circular dependencies, so find and sort the strongly connected components
-		val (tconOrd, _) = GraphUtil.getSCCOrder(tconDeps, defs.tcons.keySet)
+		val tconOrd = Graph.components(tconDeps)
 
 		// Extract the type constructors and data constructors for each module
 		val (tcons, dcons) = tconOrd.foldLeft((defs.tcons, defs.dcons)) { case ((tcons0, dcons0), currentDtdNames) =>
