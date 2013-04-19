@@ -224,7 +224,7 @@ object TypeInference {
 		val (es, iss) = bg
 		val as1 = as ++ (es collect { case (v, sc, _) => v -> sc })
 		val (as2, ctx1, ps) = tiSeq(tiImpls, ce, as1, ctx, iss)
-		val (ctx2, qs) = ctx1.flatMap(es) { case (ctx, e) => tiExpl(ce, as, ctx, e) }
+		val (ctx2, qs) = ctx1.flatMap(es) { case (ctx, e) => tiExpl(ce, as2, ctx, e) }
 		(as2, ctx2, ps ++ qs)
 	}
 
