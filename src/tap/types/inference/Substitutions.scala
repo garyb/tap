@@ -56,7 +56,8 @@ object Substitutions {
 	/**
 	 * Composes two substitutions.
 	 */
-	implicit def composeSubst(s1: Subst) = new { def @@(s2: Subst) = s2.collect { case (u, t) => (u, applySubst(s1, t)) } ++ s1 }
+	def composeSubst(s1: Subst, s2: Subst) =
+		s2.collect { case (u, t) => (u, applySubst(s1, t)) } ++ s1
 
 	/**
 	 * Combines two substitutions checking that any overlapping variables agree in both substitutions.

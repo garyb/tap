@@ -9,12 +9,13 @@ import tap.types.classes.IsIn._
 import tap.types.classes.ClassEnvironments._
 import tap.types._
 import tap.ModuleId
+import language.reflectiveCalls
 
 class IsInTests extends FlatSpec with GivenWhenThen {
 
 	behavior of "inst"
 
-	it should "throw an error when the number of provided types does not match the number of TGens" in {
+	it should "throw an error When the number of provided types does not match the number of TGens" in {
 		val a = TVar(Tyvar("a", Star))
 		val p = IsIn(ModuleId("Test", "TC"), List(TGen(0, 0), TGen(0, 1)))
 		val sc = Forall(0, List(Star, Star), TAp(TGen(0, 0), TGen(0, 1)))
@@ -106,18 +107,18 @@ class IsInTests extends FlatSpec with GivenWhenThen {
 		val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty))
 		val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test", "B"), Nil, List(Tyvar("b", Star)), Set.empty, Set.empty))
 
-		when("a predicate that references an instance with no context")
+		When("a predicate that references an instance with no context")
 		val ce3 = addInst(ce2, Inst("Test", Nil, IsIn(ModuleId("Test", "A"), List(tString))))
 		val p1 = IsIn(ModuleId("Test", "A"), List(tString))
 
-		then("the result should be an empty list, but not None")
+		Then("the result should be an empty list, but not None")
 		byInst(ce3, p1) should be === Some(List.empty)
 
-		when("a predicate that references an instance with context")
+		When("a predicate that references an instance with context")
 		val ce4 = addInst(ce3, Inst("Test", List(IsIn(ModuleId("Test", "A"), List(TVar(Tyvar("x", Star))))), IsIn(ModuleId("Test", "B"), List(TAp(tList, TVar(Tyvar("x", Star)))))))
 		val p2 = IsIn(ModuleId("Test", "B"), List(TAp(tList, tString)))
 
-		then("the result should be list containing the require predicate(s)")
+		Then("the result should be list containing the require predicate(s)")
 		byInst(ce4, p2) should be === Some(List(IsIn(ModuleId("Test", "A"), List(tString))))
 	}
 

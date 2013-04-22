@@ -2,7 +2,7 @@ package tap.types.inference
 
 import Substitutions._
 import tap.ast.FilePositional
-import tap.util.ContextOps
+import tap.util.{trace, ContextOps}
 import ContextOps._
 import tap.ir._
 import tap.types.Type._
@@ -13,6 +13,7 @@ import tap.types.classes._
 import tap.types.kinds.{Kind, Star}
 import tap.util.PrettyPrint._
 import tap.{LocalId, Id}
+import language.reflectiveCalls
 
 object TypeInference {
 

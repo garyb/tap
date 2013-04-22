@@ -7,6 +7,7 @@ import tap.types._
 import tap.types.classes.Qual._
 import tap.types.classes.{IsIn, Qual}
 import tap.types.kinds.Star
+import language.reflectiveCalls
 
 class QualTests extends FlatSpec {
 

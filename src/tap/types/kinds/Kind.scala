@@ -2,6 +2,7 @@ package tap.types.kinds
 
 import tap.Id
 import tap.types._
+import scala.annotation.tailrec
 
 sealed trait Kind
 case object Star extends Kind
@@ -32,5 +33,11 @@ object Kind {
 			case _ => throw new Error("kind * found on TAp type")
 		}
 		case _: TGen => throw new Error("kind called on TGen")
+	}
+
+	@tailrec final def arity(k: Kind, depth: Int = 0): Int = k match {
+		case Star => depth
+		case Kfun(_, k) => arity(k, depth + 1)
+		case _: Kvar => throw new Error("arity called on Kvar")
 	}
 }

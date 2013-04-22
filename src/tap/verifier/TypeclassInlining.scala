@@ -1,8 +1,6 @@
 package tap.verifier
 
 import annotation.tailrec
-import tap.util._
-import ContextOps._
 import tap.ir._
 import tap.ir.TapNodeUtil._
 import tap.types.Type._
@@ -13,36 +11,14 @@ import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{TypeclassDef, Qual, IsIn}
 import tap.types.inference.TypeInference.{freshInst, freshInstPartial}
 import tap.types.inference.Substitutions.{applySubst, Subst, tv}
-import tap.types.inference.{Unify, Substitutions}
+import tap.types.inference.Substitutions
+import tap.util._
+import tap.util.ContextOps._
 import tap.util.PrettyPrint._
 import tap.verifier.defs.{ModuleDefinitions, SimpleDefinitions}
 import tap.{LocalId, InstId, ModuleId, Id}
-import tap.ast.{NullFilePosition, FilePositional}
-import tap.ir.BindNode
-import tap.ModuleId
-import tap.types.TCon
-import scala.Some
-import tap.ir.Argument
-import tap.types.Tycon
-import tap.types.TAp
-import tap.types.TVar
-import tap.types.Tyvar
-import tap.ir.UnapplyNode
-import tap.verifier.defs.SimpleDefinitions
-import tap.ir.FunctionExpr
-import tap.types.classes.TypeclassDef
-import tap.InstId
-import tap.ir.ValueReadExpr
-import tap.LocalId
-import tap.ir.LetExpr
-import tap.types.classes.ClassEnvironments.Inst
-import tap.ir.BlockExpr
-import tap.ir.MatchExpr
-import tap.types.kinds.Kfun
-import tap.ir.CastExpr
-import tap.ir.RaiseErrorExpr
-import tap.ir.MatchCase
-import tap.ir.ApplyExpr
+import language.implicitConversions
+import language.reflectiveCalls
 
 /**
  * Notes:
@@ -254,7 +230,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
 
 		// Loop through the typeclasses in dependency order
 		val tcDeps = tcs mapValues { tc => tc.ps map { p => p.id } }
-		val tcOrd = Graph.tsort(tcs.keys.toSeq, tcDeps) map { k => k -> tcs(k) }
+		val tcOrd = Graph.tsort(tcDeps) map { k => k -> tcs(k) }
 		loop(tcOrd map { _._2 }, Map.empty, Map.empty)
 	}
 

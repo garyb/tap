@@ -8,7 +8,7 @@ import tap.types.kinds._
 import tap.types.inference.Substitutions._
 import tap.ModuleId
 import tap.types.classes.{Qual, IsIn}
-import scala.Some
+import language.reflectiveCalls
 
 class SubstitutionsTests extends FlatSpec {
 
@@ -127,7 +127,7 @@ class SubstitutionsTests extends FlatSpec {
 		val q = Tyvar("q", Star)
 		val s1 = Map(x -> tString, y -> TVar(q))
 		val s2 = Map(a -> TVar(x), b -> TAp(TVar(y), TVar(c)))
-		val s3 = s1 @@ s2
+		val s3 = composeSubst(s1, s2)
 		s3 should be === Map(a -> tString, b -> TAp(TVar(q), TVar(c)), x -> tString, y -> TVar(q))
 	}
 

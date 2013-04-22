@@ -28,6 +28,9 @@ case class TypeclassImplementsUnknownMemberError(id: ModuleId, memn: String, src
 case class TypeclassIllegalMemberDefinition(id: ModuleId, memn: String, src: FilePositional)
 		extends PositionedError("Typeclass '" + id.id + "' defines member '" + memn + "' with an illegal type (the set of class type variables are not reachable)", src)
 
+case class TypeclassRecursiveHeirarchyError(tcs: Iterable[ModuleId])
+		extends VerifierError("Recursive typeclass heirarchy detected in " + tcs.mkString(", "))
+
 // ---[ instances ]------------------------------------------------------------
 
 case class InstanceIncompleteError(tc: TypeclassDef, ps: Seq[Type], missingMembers: Iterable[String], src: FilePositional)

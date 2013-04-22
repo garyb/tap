@@ -3,7 +3,7 @@ package test.verifier
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ast._
-import tap.{ast, ModuleId}
+import tap.ModuleId
 import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
 import tap.verifier.ModuleVerifier
 import tap.verifier.errors._
@@ -12,28 +12,7 @@ import tap.types.kinds._
 import tap.types.classes.{Qual, IsIn, TypeclassDef}
 import tap.types.classes.ClassEnvironments.Inst
 import tap.ir.ValueReadExpr
-import tap.ast.ASTForall
-import tap.ast.ASTDataTypeDefinition
-import tap.verifier.errors.KindConflictError
-import tap.ir.ValueReadExpr
-import tap.types.TCon
-import tap.types.Tyvar
-import tap.verifier.errors.UnknownTypeVariableError
-import tap.ast.ASTTypeVar
-import tap.ast.ASTTypeCon
-import tap.ast.ASTTypeClassReference
-import tap.ast.ASTTypeClassDefinition
-import tap.types.classes.ClassEnvironments.Inst
-import tap.types.TGen
-import tap.verifier.errors.NamespaceError
-import tap.types.Tycon
-import tap.types.Forall
-import tap.types.TAp
-import tap.ast.ASTTypeApply
-import tap.types.classes.TypeclassDef
-import tap.types.kinds.Kfun
-import tap.ast._
-import tap.util.GraphError
+import language.reflectiveCalls
 
 class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
@@ -60,7 +39,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
 	behavior of "addDataTypeDefs"
 
-	ignore should "throw an error if the name of a type constructor conflicts with an imported definition" in {
+	it should "throw an error if the name of a type constructor conflicts with an imported definition" in {
 		val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions(Map("A" -> ModuleId("Prelude", "A")), Map.empty, Map.empty, Map.empty)))
 		val dtd = ASTDataTypeDefinition("A", Nil, Nil)
 		evaluating {
@@ -68,7 +47,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 		} should produce [NamespaceError]
 	}
 
-	ignore should "throw an error if the name of a data constructor conflicts with an imported definition" in {
+	it should "throw an error if the name of a data constructor conflicts with an imported definition" in {
 		val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions(Map.empty, Map("B" -> ModuleId("Prelude", "B")), Map.empty, Map.empty)))
 		val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", Nil)))
 		evaluating {
@@ -247,15 +226,15 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
 	it should "throw an error for recursive typeclass heirarchies" in {
 
-		when("a typeclass has itself as a superclass")
+		When("a typeclass has itself as a superclass")
 		val v1 = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
 			.addClass("A", ModuleId("Test", "A"))))
 		val tc = ASTTypeClassDefinition("A", List(ASTTypeClassReference("A", List("a"))), List("a"), Nil)
-		//evaluating {
+		evaluating {
 			v1.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), nullDefs)
-		//} should produce [GraphError]
+		} should produce [TypeclassRecursiveHeirarchyError]
 
-		when("a typeclass's superclass has the typeclass as a superclass")
+		When("a typeclass's superclass has the typeclass as a superclass")
 		val v2 = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
 			.addClass("A", ModuleId("Test", "A"))
 			.addClass("B", ModuleId("Test", "B"))))
@@ -263,7 +242,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 		val tcB = ASTTypeClassDefinition("B", List(ASTTypeClassReference("A", List("b"))), List("b"), Nil)
 		evaluating {
 			v2.addTypeclassDefs(Map(ModuleId("Test", "A") -> tcA, ModuleId("Test", "B") -> tcB), nullDefs)
-		} should produce [GraphError]
+		} should produce [TypeclassRecursiveHeirarchyError]
 	}
 
 	it should "produce typeclass definitions with a superclass" in {
@@ -325,13 +304,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 	it should "throw an error for typeclass members that don't use the class type variables" in {
 		val v = new ModuleVerifier(nullScopes)
 
-		when("the typeclass has one parameter")
+		When("the typeclass has one parameter")
 		val tc1 = ASTTypeClassDefinition("A", Nil, List("a"), List(ASTTypeClassMemberDefinition("do-a", Nil, ASTTypeVar("b"))))
 		evaluating {
 			v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc1), nullDefs)
 		} should produce [TypeclassIllegalMemberDefinition]
 
-		when("the typeclass has multiple parameters")
+		When("the typeclass has multiple parameters")
 		val tc2 = ASTTypeClassDefinition("A", Nil, List("a", "b"), List(ASTTypeClassMemberDefinition("do-a", Nil, ASTTypeVar("a"))))
 		evaluating {
 			v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc2), nullDefs)
@@ -442,21 +421,27 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 	// ------------------------------------------------------------------------
 
 	behavior of "addMemberImplementations"
-	ignore should "check that there is an implementation for each module-defined member" in {}
-	ignore should "do some stuff" in {}
+	ignore should "throw an error if there are implementations missing for defined members" in {}
+	ignore should "throw an error if multiple implemenations are provided for the same id"
+	ignore should "throw an error if there is a cycle in initialising a group of members"
+	ignore should "extend the mis in the definitions list and leave all existing values unchanged" in {}
 
 	// ------------------------------------------------------------------------
 
 	behavior of "getMemberType"
-	ignore should "do some stuff" in {}
+	ignore should "construct a qualified type from the AST for a type" in {}
 
 	// ------------------------------------------------------------------------
 
 	behavior of "getPredicates"
-	ignore should "do some stuff" in {}
+	ignore should "throw an error if a referenced type variable is out of scope" in {}
+	ignore should "throw an error if there is a kind mismatch between type and typeclass reference" in {}
+	ignore should "construct a list of predicates from a list of AST typeclass references" in {}
 
 	// ------------------------------------------------------------------------
 
 	behavior of "lookupInstanceType"
-	ignore should "do some stuff" in {}
+	ignore should "throw an error if the type has too many parameters applied" in {}
+	ignore should "throw an error if the type has no parameters applied" in {}
+	ignore should "construct a type for a typeclass instance parameter" in {}
 }

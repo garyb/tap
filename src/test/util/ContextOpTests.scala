@@ -2,8 +2,8 @@ package test.util
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers._
-import tap.util.ContextOps
-import ContextOps._
+import tap.util.ContextOps._
+import language.reflectiveCalls
 
 class ContextOpTests extends FlatSpec {
 

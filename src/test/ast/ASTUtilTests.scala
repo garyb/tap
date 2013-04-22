@@ -8,7 +8,8 @@ import tap.ast._
 import tap.types.Type._
 import tap.types._
 import tap.types.kinds._
-import tap.verifier.errors.{UnknownTypeVariableError, UnknownTypeConstructorError}
+import tap.verifier.errors.{TypeConstructorNoArgsError, TypeConstructorTooManyArgsError, UnknownTypeVariableError, UnknownTypeConstructorError}
+import language.reflectiveCalls
 
 class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
@@ -183,7 +184,7 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
 	it should "return TAps" in {
 		val tvs = Map(
-			"a" -> TVar(Tyvar("a", Star)),
+			"a" -> TVar(Tyvar("a", Kfun(Star, Kfun(Star, Star)))),
 			"b" -> TVar(Tyvar("b", Star))
 		)
 		getType(Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b")))) should be ===
@@ -217,9 +218,28 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 		val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))
 		t1 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn TGen(lastForallId, 0)) fn tString)
 
-		when("quantified variables already exist in the tvs list, they should be hidden inside the forall")
+		When("quantified variables already exist in the tvs list, they should be hidden inside the forall")
 		val tvs = Map("a" -> TVar(Tyvar("a", Star)), "b" -> TVar(Tyvar("b", Star)))
 		val t2 = getType(lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))
 		t2 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn (tvs("b") fn TGen(lastForallId, 0))) fn tvs("a"))
+	}
+
+	it should "throw an error if a type is applied too many parameters" in {
+		val lookup = Map(
+			"List" -> ModuleId("Prelude", "List"),
+			"String" -> ModuleId("Prelude", "String")
+		)
+		val tcons = Map(
+			ModuleId("Prelude", "List") -> TCon(Tycon(ModuleId("Prelude", "List"), Kfun(Star, Star))),
+			ModuleId("Prelude", "String") -> TCon(Tycon(ModuleId("Prelude", "String"), Star))
+		)
+
+		evaluating {
+			getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("List"), List(ASTTypeCon("String"), ASTTypeCon("String"))))
+		} should produce [TypeConstructorTooManyArgsError]
+
+		evaluating {
+			getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("String"), List(ASTTypeCon("String"))))
+		} should produce [TypeConstructorNoArgsError]
 	}
 }

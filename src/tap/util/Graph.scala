@@ -41,48 +41,29 @@ object Graph {
 	}
 
 	/**
-	 * Extracts the set of vertices referenced within a map of edges.
-	 */
-	def extractVertices[A](edges: Map[A, Iterable[A]]): Set[A] =
-		edges.foldLeft(Set.empty[A]) {
-			case (vs, (a, as)) => vs ++ as + a
-		}
-
-	/**
 	 * Finds and topologically sorts the strongly connected components in a graph.
 	 */
-	def components[A](vertices: Iterable[A], edges: Map[A, Iterable[A]]): List[List[A]] =
-		vertices.foldLeft(State[A]()) { (st, v) =>
+	def components[A](edges: Map[A, Iterable[A]]): List[List[A]] =
+		edges.keys.foldLeft(State[A]()) { (st, v) =>
 			if (st.dfNumber contains v) st
 			else search(v, edges, st)
 		}.result.reverse
 
 	/**
-	 * Finds and topologically sorts the strongly connected components in a graph, where the graph is defined by a set
-	 * of edges and the vertices are extracted from the edges.
+	 * Creates a lookup for finding the component a vertex belongs to from a list of components.
 	 */
-	def components[A](edges: Map[A, Iterable[A]]): List[List[A]] =
-		components(extractVertices(edges), edges)
+	def makeComponentLookup[A](components: List[List[A]]): Map[A, List[A]] =
+		components.foldLeft(Map[A, List[A]]()) { (result, comp) =>
+			comp.foldLeft(result) { (result, v) => result + (v -> comp) }
+		}
 
 	/**
 	 * Topologically sorts the vertices in an acyclic directed graph.
+	 * TODO: proper implementation - result is correct, but inefficient
 	 */
-	def tsort[A](vertices: Iterable[A], edges: Map[A, Iterable[A]]): List[A] = {
-		val out = components(vertices, edges)
+	def tsort[A](edges: Map[A, Iterable[A]]): List[A] = {
+		val out = components(edges)
 		if (out forall { c => c.length == 1 }) out.flatten
 		else throw new IllegalArgumentException("Cannot topologically sort non-acyclic graph")
 	}
-
-	/**
-	 * Topologically sorts the vertices in an acyclic directed graph, where the graph is defined by a set of edges and
-	 * the vertices are extracted from the edges.
-	 */
-	def tsort[A](edges: Map[A, Iterable[A]]): List[A] =
-		tsort(extractVertices(edges), edges)
-
-	/**
-	 * Converts a list of edges (A -> B), (A -> C) into a map of the form (A -> (B, C, ...)).
-	 */
-	def edgesToMap[A](edges: Iterable[(A, A)]): Map[A, Iterable[A]] =
-		edges groupBy { case (k, v) => k } mapValues { s => s map { case (k, v) => v } }
 }

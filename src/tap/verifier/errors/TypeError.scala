@@ -1,7 +1,7 @@
 package tap.verifier.errors
 
 import tap.ast.FilePositional
-import tap.types.TCon
+import tap.types.{Type, TCon}
 import tap.types.kinds.Kind
 import tap.util.PrettyPrint._
 
@@ -22,8 +22,8 @@ case class KindConflictError(x: Kind, y: Kind, src: FilePositional)
 
 // ---[ type constructor arity ]-----------------------------------------------
 
-case class TypeConstructorNoArgsError(tcon: TCon, src: FilePositional)
-		extends PositionedError("Type constructor '" + tcon.c.id + "' does not accept type arguments.", src)
+case class TypeConstructorNoArgsError(t: Type, src: FilePositional)
+		extends PositionedError("Type '" + prettyPrint(t) + "' does not accept type arguments.", src)
 
-case class TypeConstructorTooManyArgsError(tcon: TCon, src: FilePositional)
-		extends PositionedError("Type constructor '" + tcon.c.id + "' is being applied with too many type arguments.", src)
+case class TypeConstructorTooManyArgsError(t: Type, src: FilePositional)
+		extends PositionedError("Type constructor '" + t + "' is being applied with too many type arguments.", src)

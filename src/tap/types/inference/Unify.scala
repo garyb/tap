@@ -26,7 +26,7 @@ object Unify {
 	def mgu(x: Type, y: Type): Option[Subst] = (x, y) match {
 		case (TVar(u), t) => varBind(u, t)
 		case (t, TVar(u)) => varBind(u, t)
-		case (TAp(l, r), TAp(l1, r1)) => mgu(l, l1) flatMap { s1 => mgu(applySubst(s1, r), applySubst(s1, r1)) map { s2 => s2 @@ s1 } }
+		case (TAp(l, r), TAp(l1, r1)) => mgu(l, l1) flatMap { s1 => mgu(applySubst(s1, r), applySubst(s1, r1)) map { s2 => composeSubst(s2, s1) } }
 		case (TCon(tc1), TCon(tc2)) if tc1 == tc2 => Some(nullSubst)
 		case (TGen(ki1, i1), TGen(ki2, i2)) if ki1 == ki2 && i1 == i2 => Some(nullSubst)
 		case (Forall(i1, tvs1, t1), Forall(i2, tvs2, t2)) if i1 == i2 && tvs1 == tvs2 => mgu(t1, t2)
@@ -37,7 +37,7 @@ object Unify {
 		case (x :: xs, y :: ys) =>
 			mgu(x, y) flatMap { s1 =>
 			mgus(xs map { x => applySubst(s1, x) }, ys map { y => applySubst(s1, y) }) map { s2 =>
-			s2 @@ s1 }}
+			composeSubst(s2, s1) }}
 		case (List(), List()) => Some(nullSubst)
 		case _ => None
 	}
@@ -47,7 +47,7 @@ object Unify {
 	 */
 	def unify(x: Type, y: Type, s: Subst, src: FilePositional): Subst =
 		mgu(applySubst(s, x), applySubst(s, y)) match {
-			case Some(u) => u @@ s
+			case Some(u) => composeSubst(u, s)
 			case None => throw TIError("types do not unify:\n    " + prettyPrint(applySubst(s, x)) + "\n    " + prettyPrint(applySubst(s, y)), src)
 		}
 

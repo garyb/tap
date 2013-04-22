@@ -2,6 +2,8 @@ package tap.ast.parser
 
 import tap.ast._
 import util.parsing.combinator.RegexParsers
+import language.postfixOps
+import language.implicitConversions
 
 /**
  * S-expression-like syntax parser for Tap.

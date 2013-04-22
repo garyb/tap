@@ -5,7 +5,7 @@ import tap.{LocalId, ModuleId}
 import tap.types.Type._
 import tap.types._
 import tap.verifier.errors._
-import tap.types.kinds.{Kvar, KInfer}
+import tap.types.kinds.{Kind, Kvar, KInfer}
 
 /**
  * Useful operations on AST nodes.
@@ -59,7 +59,13 @@ object ASTUtil {
 	def getType(lookup: Map[String, ModuleId], tcons: Map[ModuleId, TCon], tvs: Map[String, TVar], ast: ASTType): Type = ast match {
 		case ASTTypeCon(id) => tcons.getOrElse(lookup(id), throw UnknownTypeConstructorError(id, ast))
 		case ASTTypeVar(id) => tvs.getOrElse(id, throw UnknownTypeVariableError(id, ast))
-		case ASTTypeApply(ttype, params) => params.foldLeft(getType(lookup, tcons, tvs, ttype)) { (t,p) => TAp(t, getType(lookup, tcons, tvs, p)) }
+		case ASTTypeApply(ttype, params) =>
+			val t = getType(lookup, tcons, tvs, ttype)
+			val k = Kind.kind(t)
+			val arity = Kind.arity(k)
+			if (arity == 0) throw new TypeConstructorNoArgsError(t, ast)
+			else if (params.length > arity) throw new TypeConstructorTooManyArgsError(t, ast)
+			params.foldLeft(t) { (t,p) => TAp(t, getType(lookup, tcons, tvs, p)) }
 		case ASTFunctionType(List(p)) => makeFunctionType(List(tUnit, getType(lookup, tcons, tvs, p)))
 		case ASTFunctionType(params) => makeFunctionType(params map { ast => getType(lookup, tcons, tvs, ast) })
 		case ASTForall(ids, t) =>
@@ -70,5 +76,15 @@ object ASTUtil {
 			val ttvs = (ids map { p => p -> TVar(Tyvar(p, KInfer(km, Kvar(msn, p)))) }).toMap
 			val tt = getType(lookup, tcons, tvs ++ ttvs, t)
 			quantify(ttvs.values.toList map { t => t.v }, tt)
+	}
+
+	/**
+	 * Checks whether a type is a concrete type or not. A concrete type is a type constructor or application of a type
+	 * constructor.
+	 */
+	@tailrec final def isConcrete(t: ASTType): Boolean = t match {
+		case ASTTypeApply(x, _) => isConcrete(x)
+		case _: ASTTypeCon => true
+		case _ => false
 	}
 }

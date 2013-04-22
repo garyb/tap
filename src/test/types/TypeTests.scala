@@ -7,6 +7,7 @@ import tap.types._
 import tap.types.Type._
 import tap.types.kinds._
 import java.lang.IllegalArgumentException
+import language.reflectiveCalls
 
 class TypeTests extends FlatSpec {
 

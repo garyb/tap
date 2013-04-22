@@ -5,6 +5,8 @@ import tap.types.kinds.{Kind, Kfun, Star}
 import scala.annotation.tailrec
 import tap.types.inference.Substitutions
 import tap.util.PrettyPrint._
+import language.implicitConversions
+import language.reflectiveCalls
 
 sealed trait Type
 case class TVar(v: Tyvar) extends Type
@@ -27,14 +29,14 @@ object Type {
 
 	private def id(name: String) = ModuleId("Prelude", name)
 
-	val tArrow: Type  = TCon(Tycon(id("->"), (Kfun(Star, (Kfun(Star, Star))))))
+	val tArrow: Type  = TCon(Tycon(id("->"), Kfun(Star, Kfun(Star, Star))))
 	val tNumber: Type = TCon(Tycon(id("Number"), Star))
 	val tString: Type = TCon(Tycon(id("String"), Star))
 	val tBool: Type   = TCon(Tycon(id("Bool"), Star))
 	val tUnit: Type   = TCon(Tycon(id("Unit"), Star))
-	val tList: Type   = TCon(Tycon(id("List"), (Kfun(Star, Star))))
-	val tVar: Type    = TCon(Tycon(id("Var"), (Star)))
-	val tAny: Type    = Type.quantify(List(Tyvar("a", Star)), TVar(Tyvar("a", (Star))))
+	val tList: Type   = TCon(Tycon(id("List"), Kfun(Star, Star)))
+	val tVar: Type    = TCon(Tycon(id("Var"), Star))
+	val tAny: Type    = Type.quantify(List(Tyvar("a", Star)), TVar(Tyvar("a", Star)))
 
 	/**
 	 * Constructs a function type.
@@ -81,6 +83,11 @@ object Type {
 	 * Finds the arity of a function based on its type.
 	 */
 	def getFunctionArity(t: Type): Int = getFunctionTypes(t).length - 1
+
+	/**
+	 * Finds the arity of a type based on its kind.
+	 */
+	def getTypeArity(t: Type): Int = Kind.arity(Kind.kind(t))
 
 	/**
 	 * Creates a function type from a list of types. List(a, b, c) becomes (a -> b -> c).

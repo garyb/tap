@@ -15,6 +15,7 @@ import tap.util.PrettyPrint._
 import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
 import tap.verifier.errors._
 import tap.{InstId, ModuleId, Id}
+import language.reflectiveCalls
 
 object ModuleVerifier {
 
@@ -143,7 +144,11 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 
 		// Sort typeclasses to ensure they resolve in the correct order. For example, Ord depends on Eq, so the result
 		// of this sort will place Eq ahead of Ord in the list.
-		val tcOrd = Graph.tsort(tcDeps.keys.toSeq, tcDeps).filter { msn => tcASTs.contains(msn) }
+		val tcOrd = try {
+			Graph.tsort(tcDeps).filter { msn => tcASTs.contains(msn) }
+		} catch {
+			case e: IllegalArgumentException => throw TypeclassRecursiveHeirarchyError(tcDeps.keys)
+		}
 
 		// Resolve the typeclasses
 		val tcs = tcOrd.foldLeft(defs.tcs) { case (tcs, id) =>
@@ -163,8 +168,11 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 					case None =>
 				}
 
+				val superId = currLookup.tcs(supername)
+				if (superId == id) throw TypeclassRecursiveHeirarchyError(List(currLookup.tcs(supername), id))
+
 				// Check the params passed to the superclass matches the arity of the superclass
-				val superParams = tcs(currLookup.tcs(supername)).vs
+				val superParams = tcs(superId).vs
 				if (superParams.length != params.length) throw TypeclassArityError(supername, superParams.length, params.length, ast)
 
 				// Add constraints for each of the parameters, using the kinds from the superclass parameters
@@ -226,16 +234,10 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 	        val tcId = tcIds(name)
 	        val tc = defs.tcs(tcId)
 
-	        def isConcrete(t: ASTType): Boolean = t match {
-		        case ASTTypeApply(x, _) => isConcrete(x)
-		        case _: ASTTypeCon => true
-		        case _ => false
-	        }
-
 	        // TODO: get all type variables used in concrete applied types
 	        // TODO: check kinds of type variables used all work out
 	        val usedParams = params.collect {
-		        case p @ ASTTypeApply(tc, _) if isConcrete(tc) => ASTUtil.findTypeVars(p, Set.empty)
+		        case p @ ASTTypeApply(tc, _) if ASTUtil.isConcrete(tc) => ASTUtil.findTypeVars(p, Set.empty)
 	        }.flatten
 
 	        val ps = (params zip tc.vs) map {
@@ -327,7 +329,7 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 			val mDeps = mis mapValues { mi => TapNodeUtil.findImmediateDependencies(mi).toList } filter { case (id, deps) => deps.nonEmpty }
 			val extDeps = mDeps.values.flatten.toSet.filter { id => !(mDeps contains id) }
 
-			val xss = Graph.components(mDeps.keys ++ extDeps, mDeps ++ extDeps.map { _ -> Seq.empty })
+			val xss = Graph.components(mDeps ++ extDeps.map { _ -> Seq.empty })
 			xss find { xs => xs.length > 1 } match {
 				case Some(xs) => throw ModuleMemberInitCycleError(xs)
 				case None => mis
@@ -370,9 +372,12 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 
 	def lookupInstanceType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
 
-		case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t).asInstanceOf[TCon]
+		case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t)
 
 		case t @ ASTTypeApply(thing: ASTTypeCon, params) =>
+
+			// TODO: this can probably be simplified with a more intelligent usage of ASTUtil.findTypeVars and ASTUtil.getType
+
 			val tcon = ASTUtil.getType(lookup, tcons, Map.empty, thing).asInstanceOf[TCon]
 
 			tcon.c.k match {
@@ -393,6 +398,7 @@ class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
 					ASTUtil.getType(lookup, tcons, tvars, t)
 				case _: Kvar => throw new Error("tcon kind is Kvar")
 			}
+
 		case _ => throw new Error("Illegal AST: typeclass instance parameter is not a type constructor or applied type.")
 	}
 }

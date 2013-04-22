@@ -3,6 +3,7 @@ package tap.types
 import tap.types.Type._
 import tap.{InstId, ModuleId, Id}
 import tap.types.kinds.{Kfun, Star}
+import language.reflectiveCalls
 
 
 object Natives {

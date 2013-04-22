@@ -170,10 +170,10 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 		fromCaseAST(ASTCaseBranch(ASTNumber(1), None, ASTNumber(1)), nullState) should
 				equal(MatchCase(NumberExpr(1), None, NumberExpr(1)))
 
-		when("the case has a guard")
+		When("the case has a guard")
 		val x = ASTCaseBranch(ASTWildcardValue, Some(ASTValueRead("True")), ASTNumber(2))
 
-		then("the corresponding TapExpr for the guard should be produced too")
+		Then("the corresponding TapExpr for the guard should be produced too")
 		val state = nullState.addLocal("True")
 		fromCaseAST(x, state) should equal(MatchCase(WildcardValueExpr, Some(ValueReadExpr(LocalId("True"))), NumberExpr(2)))
 	}
@@ -279,7 +279,7 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 		fromAST(ASTApply(ASTValueRead("fn"), List(ASTNumber(1), ASTWildcardValue, ASTWildcardValue, ASTNumber(4))), state) should
 			equal(FunctionExpr(Argument("b"), FunctionExpr(Argument("a"), ApplyExpr(ApplyExpr(ApplyExpr(ApplyExpr(ValueReadExpr(LocalId("fn")), NumberExpr(1)), ValueReadExpr(LocalId("b"))), ValueReadExpr(LocalId("a"))), NumberExpr(4)))))
 
-		when("introducing new arguments they should not conflict with existing local definitions")
+		When("introducing new arguments they should not conflict with existing local definitions")
 		val state2 = state.addLocal("a").addLocal("b").addLocal("b1").addLocal("b2")
 		fromAST(ASTApply(ASTValueRead("fn"), List(ASTWildcardValue, ASTWildcardValue, ASTNumber(2))), state2) should
 			equal(FunctionExpr(Argument("b3"), FunctionExpr(Argument("a1"), ApplyExpr(ApplyExpr(ApplyExpr(ValueReadExpr(LocalId("fn")), ValueReadExpr(LocalId("b3"))), ValueReadExpr(LocalId("a1"))), NumberExpr(2)))))

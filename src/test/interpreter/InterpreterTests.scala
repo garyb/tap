@@ -53,32 +53,32 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
 
 		// TODO: check only the correct branch is evaluated
 
-		when("dealing with wildcard matching")
+		When("dealing with wildcard matching")
 		eval(MatchExpr(eTrue, List(
 			MatchCase(WildcardValueExpr, None, eTrue)
 		))) should be === iTrue
 
-		when("dealing with string value matching")
+		When("dealing with string value matching")
 		eval(MatchExpr(StringExpr("hello"), List(
 			MatchCase(StringExpr("hello"), None, eTrue)
 		))) should be === iTrue
 
-		when("dealing with number value matching")
+		When("dealing with number value matching")
 		eval(MatchExpr(NumberExpr(20), List(
 			MatchCase(NumberExpr(20), None, eTrue)
 		))) should be === iTrue
 
-		when("dealing with basic value binding")
+		When("dealing with basic value binding")
 		eval(MatchExpr(eTrue, List(
 			MatchCase(BindNode("x", None), None, ValueReadExpr(LocalId("x")))
 		))) should be === iTrue
 
-		when("dealing with destructuring")
+		When("dealing with destructuring")
 		eval(MatchExpr(eTuple2(eFalse, eTrue), List(
 			MatchCase(UnapplyNode(idTuple2, List(WildcardValueExpr, BindNode("x", None))), None, ValueReadExpr(LocalId("x")))
 		))) should be === iTrue
 
-		when("dealing with complex value binding")
+		When("dealing with complex value binding")
 		eval(MatchExpr(eSome(eTrue), List(
 			MatchCase(BindNode("x", Some(UnapplyNode(idSome, List(BindNode("v", None))))), None, eTuple2(ValueReadExpr(LocalId("x")), ValueReadExpr(LocalId("v"))))
 		))) should be === iTuple2(iSome(iTrue), iTrue)
@@ -88,7 +88,7 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
 		eval(CastExpr(eTrue, TCon(Tycon(ModuleId("Prelude", "Boolean"), Star)))) should be === iTrue
 	}
 
-	it should "throw an exception when a runtime error is raised" in {
+	it should "throw an exception When a runtime error is raised" in {
 		evaluating { eval(RaiseErrorExpr(StringExpr("test"))) } should produce [InterpreterRuntimeError]
 	}
 

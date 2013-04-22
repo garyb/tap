@@ -1,5 +1,7 @@
 package tap.util
 
+import language.implicitConversions
+
 object ContextOps {
 
 	implicit def withContext[C](ctx: C) = new {
