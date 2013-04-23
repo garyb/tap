@@ -7,27 +7,27 @@ import scala.util.parsing.input.Positional
  */
 trait FilePositional extends Positional {
 
-	/**
-	 * The file this object came from.
-	 */
-	var file: String = null
+    /**
+     * The file this object came from.
+     */
+    var file: String = null
 
-	/**
-	 * Sets the source file this object came from.
-	 */
-	def setFile(newFile: String): this.type = {
-		file = newFile
-		this
-	}
+    /**
+     * Sets the source file this object came from.
+     */
+    def setFile(newFile: String): this.type = {
+        file = newFile
+        this
+    }
 
-	/**
-	 * Sets the source file and position within the file this object came from.
-	 */
-	def setFilePosFrom(fp: FilePositional): this.type = {
-		file = fp.file
-		pos = fp.pos
-		this
-	}
+    /**
+     * Sets the source file and position within the file this object came from.
+     */
+    def setFilePosFrom(fp: FilePositional): this.type = {
+        file = fp.file
+        pos = fp.pos
+        this
+    }
 }
 
 object NullFilePosition extends FilePositional

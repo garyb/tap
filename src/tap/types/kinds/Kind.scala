@@ -11,33 +11,33 @@ case class Kvar(q: Id, id: String) extends Kind
 
 object Kind {
 
-	/**
-	 * Finds the kind of a type variable.
-	 */
-	def kind(t: Tyvar) = t.k
+    /**
+     * Finds the kind of a type variable.
+     */
+    def kind(t: Tyvar) = t.k
 
-	/**
-	 * Finds the kind of a type constant.
-	 */
-	def kind(t: Tycon) = t.k
+    /**
+     * Finds the kind of a type constant.
+     */
+    def kind(t: Tycon) = t.k
 
-	/**
-	 * Finds the kind of a type.
-	 */
-	def kind(t: Type): Kind = t match {
-		case TVar(u) => kind(u)
-		case TCon(tc) => kind(tc)
-		case Forall(_, _, t) => kind(t)
-		case TAp(t, _) => kind(t) match {
-			case Kfun(_, k) => k
-			case _ => throw new Error("kind * found on TAp type")
-		}
-		case _: TGen => throw new Error("kind called on TGen")
-	}
+    /**
+     * Finds the kind of a type.
+     */
+    def kind(t: Type): Kind = t match {
+        case TVar(u) => kind(u)
+        case TCon(tc) => kind(tc)
+        case Forall(_, _, t) => kind(t)
+        case TAp(t, _) => kind(t) match {
+            case Kfun(_, k) => k
+            case _ => throw new Error("kind * found on TAp type")
+        }
+        case _: TGen => throw new Error("kind called on TGen")
+    }
 
-	@tailrec final def arity(k: Kind, depth: Int = 0): Int = k match {
-		case Star => depth
-		case Kfun(_, k) => arity(k, depth + 1)
-		case _: Kvar => throw new Error("arity called on Kvar")
-	}
+    @tailrec final def arity(k: Kind, depth: Int = 0): Int = k match {
+        case Star => depth
+        case Kfun(_, k) => arity(k, depth + 1)
+        case _: Kvar => throw new Error("arity called on Kvar")
+    }
 }
