@@ -13,7 +13,7 @@ case class ExMember(name: String) extends Export
 /**
  * A data type export, specifiying which data constructors are exported.
  */
-case class ExDataType(name: String, dcons: List[String]) extends Export
+case class ExDataType(name: String, dcons: Set[String]) extends Export
 
 /**
  * A typeclass export.

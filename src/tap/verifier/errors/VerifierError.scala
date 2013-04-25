@@ -21,9 +21,6 @@ case class SyntaxError(msg: String, src: FilePositional)
 case class DuplicateDefinitionError(thing: String, name: String, src: FilePositional)
         extends PositionedError("Duplicate definition of " + thing + " '" + name + "'", src)
 
-case class NamespaceError(thing: String, name: String, src: FilePositional)
-        extends PositionedError(thing + " '" + name + "' is already present in the current namespace", src)
-
 // ---[ unknown references ]---------------------------------------------------
 
 case class MissingDefinitionError(ident: String, src: FilePositional)

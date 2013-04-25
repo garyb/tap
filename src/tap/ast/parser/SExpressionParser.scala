@@ -59,7 +59,7 @@ object SExpressionParser extends RegexParsers {
     def createModule(name: String, members: List[ASTModuleMember]) = {
         val imports = members.collect { case ASTImport(id) => id }
         val exports = members.collect {
-            case ASTDataTypeDefinition(id, _, dcons) => ExDataType(id, dcons map { dcon => dcon.name })
+            case ASTDataTypeDefinition(id, _, dcons) => ExDataType(id, (dcons map { dcon => dcon.name }).toSet)
             case ASTLet(id, _) => ExMember(id)
             case ASTModuleExport(id) => ExModule(id)
         } ++ (members.collect {
@@ -70,7 +70,7 @@ object SExpressionParser extends RegexParsers {
         val instances = members.collect { case ast: ASTTypeClassInstance => ast }
         val memberDefs = members.collect { case ast: ASTDef => ast }
         val memberImpls = members.collect { case ast: ASTLet => ast }
-        ASTModule(name, exports, imports, datatypes, typeclasses, instances, memberDefs, memberImpls)
+        ASTModule(name, exports.toSet, imports.toSet, datatypes, typeclasses, instances, memberDefs, memberImpls)
     }
 
     //  [ lexer-like rules ]  -----------------------------------------------------------------------------------------

@@ -11,11 +11,11 @@ case class DuplicateModuleError(mId: String)
 
 // ---[ imports & exports ]----------------------------------------------------
 
-case class ModuleMissingImportsError(mId: String, imports: Seq[String])
-        extends VerifierError("Module '" + mId + "' attempted to import missing module" + (if (imports.length == 1) "" else "s") + ": '" + imports.mkString("', '") + "'")
+case class ModuleMissingImportsError(mId: String, imports: Iterable[String])
+        extends VerifierError("Module '" + mId + "' attempted to import missing module" + (if (imports.size == 1) "" else "s") + ": '" + imports.mkString("', '") + "'")
 
-case class ExportModuleWithoutImportError(mId: String, modules: List[String])
-        extends VerifierError("Module " + mId + " exports module" + (if (modules.size > 1) "s " + modules.mkString(", ") else " " + modules(0)) + " but does not import " + (if (modules.size > 1) "them" else "it"))
+case class ExportModuleWithoutImportError(mId: String, modules: Iterable[String])
+        extends VerifierError("Module " + mId + " exports module" + (if (modules.size > 1) "s " + modules.mkString(", ") else " " + modules.head) + " but does not import " + (if (modules.size > 1) "them" else "it"))
 
 // ---[ members ]--------------------------------------------------------------
 

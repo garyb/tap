@@ -200,8 +200,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         parseModule("(module Test)") should be ===
                 ASTModule(
                     name = "Test",
-                    exports = Nil,
-                    imports = Nil,
+                    exports = Set.empty,
+                    imports = Set.empty,
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -216,8 +216,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = Nil,
-                    imports = List("Prelude"),
+                    exports = Set.empty,
+                    imports = Set("Prelude"),
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -233,8 +233,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = List(ExModule("Prelude")),
-                    imports = Nil,
+                    exports = Set(ExModule("Prelude")),
+                    imports = Set.empty,
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -249,8 +249,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = Nil,
-                    imports = Nil,
+                    exports = Set.empty,
+                    imports = Set.empty,
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -262,8 +262,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = Nil,
-                    imports = Nil,
+                    exports = Set.empty,
+                    imports = Set.empty,
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -278,8 +278,8 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = List(ExMember("x")),
-                    imports = Nil,
+                    exports = Set(ExMember("x")),
+                    imports = Set.empty,
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,
@@ -296,11 +296,11 @@ class ParserTests extends FlatSpec with ParserFixture {
         """) should be ===
                 ASTModule(
                     name = "Test",
-                    exports = List(
-                        ExDataType("Unit", Nil),
-                        ExDataType("Bool", List("True", "False")),
-                        ExDataType("Maybe", List("Some", "None"))),
-                    imports = Nil,
+                    exports = Set(
+                        ExDataType("Unit", Set.empty),
+                        ExDataType("Bool", Set("True", "False")),
+                        ExDataType("Maybe", Set("Some", "None"))),
+                    imports = Set.empty,
                     datatypes = List(
                         ASTDataTypeDefinition("Unit", Nil, Nil),
                         ASTDataTypeDefinition("Bool", Nil, List(

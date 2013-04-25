@@ -5,8 +5,8 @@ sealed trait ASTNode extends FilePositional
 // ---[ module structure ]---------------------------------------------------------------------------------------------
 
 case class ASTModule(name: String,
-                     exports: List[Export],
-                     imports: List[String],
+                     exports: Set[Export],
+                     imports: Set[String],
                      datatypes: List[ASTDataTypeDefinition],
                      typeclasses: List[ASTTypeClassDefinition],
                      instances: List[ASTTypeClassInstance],

@@ -4,7 +4,7 @@ import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ast._
 import tap.ModuleId
-import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
+import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.ModuleVerifier
 import tap.verifier.errors._
 import tap.types._
@@ -17,7 +17,7 @@ import language.reflectiveCalls
 class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     val nullDefs = ModuleDefinitions(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
-    val nullScopes = Map("Test" -> ImportedDefinitions.empty)
+    val nullScopes = Map("Test" -> DefinitionsLookup.empty)
     val testDefs =
         ModuleDefinitions(
             Map(ModuleId("Test", "X") -> TCon(Tycon(ModuleId("Test", "X"), Star))),
@@ -40,7 +40,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     behavior of "addDataTypeDefs"
 
     it should "throw an error if the name of a type constructor conflicts with an imported definition" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions(Map("A" -> ModuleId("Prelude", "A")), Map.empty, Map.empty, Map.empty)))
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map("A" -> ModuleId("Prelude", "A")), Map.empty, Map.empty, Map.empty)))
         val dtd = ASTDataTypeDefinition("A", Nil, Nil)
         evaluating {
             v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
@@ -48,7 +48,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "throw an error if the name of a data constructor conflicts with an imported definition" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions(Map.empty, Map("B" -> ModuleId("Prelude", "B")), Map.empty, Map.empty)))
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map.empty, Map("B" -> ModuleId("Prelude", "B")), Map.empty, Map.empty)))
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", Nil)))
         evaluating {
             v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
@@ -77,7 +77,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "handle data constructors with non-type variable arguments" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addTCon("A", ModuleId("Test", "A"))
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataTypeDefinition("A", Nil, Nil)
@@ -91,7 +91,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "handle circular dependencies between type constructors" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addTCon("A", ModuleId("Test", "A"))
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("A", List(ASTTypeCon("B")))))
@@ -106,7 +106,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "handle self-referential data constructors" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addTCon("A", ModuleId("Test", "A"))))
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", List(ASTTypeCon("A")))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
@@ -203,7 +203,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "throw an error for typeclasses that pass undeclared type variables to a superclass" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val tcA = ASTTypeClassDefinition("A", Nil, List("p"), Nil)
@@ -214,7 +214,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "throw an error for superclass references with the wrong arity" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val tcA = ASTTypeClassDefinition("A", Nil, List("p"), Nil)
@@ -227,7 +227,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "throw an error for recursive typeclass heirarchies" in {
 
         When("a typeclass has itself as a superclass")
-        val v1 = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v1 = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))))
         val tc = ASTTypeClassDefinition("A", List(ASTTypeClassReference("A", List("a"))), List("a"), Nil)
         evaluating {
@@ -235,7 +235,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [TypeclassRecursiveHeirarchyError]
 
         When("a typeclass's superclass has the typeclass as a superclass")
-        val v2 = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v2 = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val tcA = ASTTypeClassDefinition("A", List(ASTTypeClassReference("B", List("a"))), List("a"), Nil)
@@ -246,7 +246,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "produce typeclass definitions with a superclass" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val tcA = ASTTypeClassDefinition("A", Nil, List("a"), Nil)
@@ -259,7 +259,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "produce typeclass definitions with multiple superclasses" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))
             .addClass("C", ModuleId("Test", "C"))))
@@ -275,7 +275,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "produce typeclass definitions with multiple superclasses over multiple type variables" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))
             .addClass("C", ModuleId("Test", "C"))))
@@ -291,7 +291,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "infer the kind of type variables using superclass information" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Kfun(Star, Star))), Set.empty, Set.empty))))
@@ -354,7 +354,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "throw an error if the kind of type variables inferred from member definitions conflicts with the kind inferred from superclass information" in {
-        val v = new ModuleVerifier(Map("Test" -> ImportedDefinitions.empty
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
         val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Kfun(Star, Star))), Set.empty, Set.empty))))

@@ -12,24 +12,12 @@ import tap.types.kinds.Kind._
 import tap.types.kinds._
 import tap.util.{trace, Graph}
 import tap.util.PrettyPrint._
-import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
+import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.errors._
 import tap.{InstId, ModuleId, Id}
 import language.reflectiveCalls
 
-object ModuleVerifier {
-
-    /**
-     * Finds named imports within a module.
-     */
-    def findImports(module: ASTModule): List[String] = {
-        val name = module.name
-        val imports = module.imports filter { _ != name }
-        if (name == "Prelude") imports else "Prelude" :: imports
-    }
-}
-
-class ModuleVerifier(val scopes: Map[String, ImportedDefinitions]) {
+class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     type ModuleName = String
     type TypeConstructors = Map[ModuleId, TCon]

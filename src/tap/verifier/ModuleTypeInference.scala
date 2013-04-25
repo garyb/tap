@@ -11,10 +11,10 @@ import tap.types.inference.Substitutions.{Subst, tv}
 import tap.types.inference.TypeInference.ExprTypeMap
 import tap.types.inference.{TypeInference, Substitutions}
 import tap.util.{Graph, trace}
-import tap.verifier.defs.{ImportedDefinitions, ModuleDefinitions}
+import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.types.{Forall, Type}
 
-class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, ImportedDefinitions], val dependencies: Map[String, Set[String]]) {
+class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, DefinitionsLookup], val dependencies: Map[String, Set[String]]) {
 
     type ModuleName = String
     type Expl = Id

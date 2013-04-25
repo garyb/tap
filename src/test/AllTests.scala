@@ -24,6 +24,7 @@ class AllTests extends Suites(
 
     new verifier.ModuleVerifierTests,
     new verifier.ModuleTypeInferenceTests,
+    new verifier.ProgramVerifierTests,
 
     new interpreter.InterpreterTests
 )
