@@ -1,2 +1,7 @@
 
 /bin
+/lib
+/*.iml
+/*.iws
+/*.ipr
+/.idea
