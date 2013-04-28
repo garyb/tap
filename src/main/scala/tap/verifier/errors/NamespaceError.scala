@@ -7,6 +7,9 @@ import tap.util.PrettyPrint._
 case class NamespaceError(thing: String, name: String, src: FilePositional)
     extends PositionedError(thing + " '" + name + "' is already present in the current namespace", src)
 
+case class ModuleSelfImportError(mId: String)
+    extends VerifierError("Module '" + mId + "' imports itself")
+
 case class ImportConflictError(mId: String, defType: String, localId: String, id1: Id, id2: Id)
     extends VerifierError("Module '" + mId + "' imports conflicting definitions for " + defType + " '" + localId + "': " + prettyPrint(id1) + ", " + prettyPrint(id2))
 

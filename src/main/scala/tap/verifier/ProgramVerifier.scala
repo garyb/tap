@@ -1,7 +1,7 @@
 package tap.verifier
 
 import defs.{ModuleDefinitions, DefinitionsLookup}
-import errors.{HidingImportError, ExportModuleWithoutImportError, ModuleMissingImportsError}
+import errors.{ModuleSelfImportError, HidingImportError, ExportModuleWithoutImportError, ModuleMissingImportsError}
 import tap.util.{trace, Graph}
 import tap.ir.TapNode
 import tap.types.classes.Qual
@@ -17,9 +17,12 @@ object ProgramVerifier {
 
     def apply(asts: Map[String, ASTModule]): (List[List[String]], ModuleDefinitions, Map[TapNode, Qual[Type]], Subst) = {
 
+        // This needs to be run before makeScopedLookups - it ensures that modules import modules before
+        // re-exporting them.
         val deps = findModuleDependencies(asts)
 
-        val scopeMaps = makeScopedLookups(asts, deps)
+        // Create the scope lookup maps for each module
+        val scopeMaps = makeScopedLookups(asts)
 
         val explModuleDependencies = (deps map { case (mId, mDeps) =>
             mId -> (mDeps flatMap { dep => accumulateDependencies(dep, deps, Set(dep)) }).toSet
@@ -30,45 +33,52 @@ object ProgramVerifier {
 
         // Iterate through the grouped modules and run the verifier on each group, building up the list of all
         // module-scoped definitions in the program
-        val defs = ord.foldLeft((ModuleDefinitions.empty, Map.empty[TapNode, Qual[Type]], Map.empty: Subst)) { case ((defs0, ets0, s0), moduleGroup) =>
-            if (moduleGroup.length == 1) trace("Resolving module", moduleGroup(0))
-            else trace("Resolving module group", moduleGroup.mkString(", "))
-            val scopeMap = (moduleGroup map { id => id -> scopeMaps(id) }).toMap
-            val moduleDeps = (moduleGroup map { id => id -> (explModuleDependencies(id) ++ moduleGroup) }).toMap
-            val modules = moduleGroup map { id => asts(id) }
-            val verifier = new ModuleVerifier(scopeMap)
-            val typechecker = new ModuleTypeInference(modules, scopeMap, moduleDeps)
-            val (defs1, s1, ets1) = typechecker(verifier(modules, defs0))
-            (defs1, ets0 ++ ets1, s0 ++ s1)
+        val defs = ord.foldLeft((ModuleDefinitions.empty, Map.empty[TapNode, Qual[Type]], Map.empty: Subst)) {
+            case ((defs0, ets0, s0), moduleGroup) =>
+                if (moduleGroup.length == 1) trace("Resolving module", moduleGroup(0))
+                else trace("Resolving module group", moduleGroup.mkString(", "))
+                val scopeMap = (moduleGroup map { id => id -> scopeMaps(id) }).toMap
+                val moduleDeps = (moduleGroup map { id => id -> (explModuleDependencies(id) ++ moduleGroup) }).toMap
+                val modules = moduleGroup map { id => asts(id) }
+                val verifier = new ModuleVerifier(scopeMap)
+                val typechecker = new ModuleTypeInference(modules, scopeMap, moduleDeps)
+                val (defs1, s1, ets1) = typechecker(verifier(modules, defs0))
+                (defs1, ets0 ++ ets1, s0 ++ s1)
         }
 
         (ord, defs._1, defs._2, defs._3)
     }
 
     /**
-     * Extract the imported dependencies for each module. Also check that the dependencies actually exist in the imported modules. Also ensure any exported modules are in the import list.
-     * @param asts
+     * Extract the imported dependencies for each module. Also check that the dependencies actually exist in the
+     * imported modules. Also ensure any exported modules are in the import list.
      */
-    def findModuleDependencies(asts: Map[String, ASTModule]): Map[String, Set[String]] = asts mapValues {
-        case ast @ ASTModule(name, exports, _, _, _, _, _, _) =>
-            val imports = findImportedModules(ast)
-            val missingImports = imports filterNot { asts contains _ }
-            if (missingImports.nonEmpty) throw ModuleMissingImportsError(name, missingImports)
-            val missingExports = exports collect { case ExModule(id) if !(imports contains id) => id }
-            if (missingExports.nonEmpty) throw ExportModuleWithoutImportError(name, missingExports)
-            imports
+    def findModuleDependencies(asts: Map[String, ASTModule]): Map[String, Set[String]] = {
+        // XXX: should be able to use mapValues here, but for some reason it doesn't seem to work - the resulting map is empty
+        asts map {
+            case (k, ast @ ASTModule(name, exports, _, _, _, _, _, _)) =>
+                val imports = findImportedModules(ast)
+                val missingImports = imports filterNot { asts contains _ }
+                if (missingImports.nonEmpty) throw ModuleMissingImportsError(name, missingImports)
+                val missingExports = exports collect { case ExModule(id) if !(imports contains id) => id }
+                if (missingExports.nonEmpty) throw ExportModuleWithoutImportError(name, missingExports)
+                k -> imports
+        }
     }
 
     /**
      * Constructs a lookup table for each module for resolving fully qualified IDs from module-local IDs.
      */
-    def makeScopedLookups(asts: Map[String, ASTModule], deps: Map[String, Set[String]]): Map[String, DefinitionsLookup] =
-        deps map { case (mId, imports) =>
-            // TODO: allow qualified importing  } needs support in the AST
-            // TODO: allow partial importing    } needs support in the AST
+    def makeScopedLookups(asts: Map[String, ASTModule]): Map[String, DefinitionsLookup] = {
+        val exports = asts mapValues { ast => findExportedDefinitions(ast.name, asts, Set(ast.name)) }
+        asts mapValues { case ASTModule(mId, _, imports, _, _, _, _, _) =>
 
             val importedDefs = imports.foldLeft(DefinitionsLookup.empty) {
-                case (defs, i) => DefinitionsLookup.merge(mId, defs, findExportedDefinitions(i, asts, Set(mId, i)))
+                case (importedDefs, ASTImport(name, defs, prefix)) =>
+                    var lookup = exports(name)
+                    if (defs != None) lookup = lookup.select(mId, name, defs.get)
+                    if (prefix != None) lookup = lookup.addPrefix(prefix.get)
+                    DefinitionsLookup.merge(mId, importedDefs, lookup)
             }
 
             def getModuleId(defType: String, coll: Map[String, ModuleId])(thing: { def name: String }) = {
@@ -88,12 +98,14 @@ object ProgramVerifier {
                 (module.typeclasses flatMap { tc => tc.members } map getModuleId("typeclass member", importedDefs.members))
 
             val moduleDefs = DefinitionsLookup(tcons, dcons, tcs, members)
-            mId -> DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
+            DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
         }
+    }
 
     /**
-     * Finds the definitions exported from a module. If moudule A exports module B, the resulting list will contain all
-     * the exported definitions from both A and B.
+     * Finds all the definitions exported from a module. If module A exports module B, the resulting list will contain
+     * all the exported definitions from both A and B.
+     * TODO: what happens when a module is partially imported, but re-exported? should be disallowed?
      */
     def findExportedDefinitions(mId: String, asts: Map[String, ASTModule], seen: Set[String]): DefinitionsLookup = {
         var nullDefs = DefinitionsLookup.empty
@@ -110,6 +122,7 @@ object ProgramVerifier {
                 else {
                     // TODO: this merge is unsafe, not checking for key collisions
                     val idefs = findExportedDefinitions(id, asts, seen + id)
+                    DefinitionsLookup.merge(seen.head, defs, idefs)
                     DefinitionsLookup(
                         idefs.tcons ++ defs.tcons,
                         idefs.dcons ++ defs.dcons,
@@ -139,8 +152,8 @@ object ProgramVerifier {
      * Finds named imports within a module.
      */
     def findImportedModules(module: ASTModule): Set[String] = {
-        val name = module.name
-        val imports = module.imports filter { _ != name }
-        if (name == "Prelude") imports else imports + "Prelude"
+        val imports = module.imports map { i => i.moduleName }
+        if (imports exists { _ == module.name }) throw ModuleSelfImportError(module.name)
+        if (module.name == "Prelude") imports else imports + "Prelude"
     }
 }

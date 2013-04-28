@@ -57,7 +57,7 @@ object SExpressionParser extends RegexParsers {
     }
 
     def createModule(name: String, members: List[ASTModuleMember]) = {
-        val imports = members.collect { case ASTImport(id) => id }
+        val imports = members.collect { case i: ASTImport => i }
         val exports = members.collect {
             case ASTDataTypeDefinition(id, _, dcons) => ExDataType(id, (dcons map { dcon => dcon.name }).toSet)
             case ASTLet(id, _) => ExMember(id)
@@ -203,7 +203,11 @@ object SExpressionParser extends RegexParsers {
 
     //  [ modules ]  --------------------------------------------------------------------------------------------------
 
-    val mimport = sourced( "(" ~> "import" ~> moduleIdent <~ ")" ^^ { case ident => ASTImport(ident) } )
+    val withPrefix = "(" ~> "with-prefix" ~> ident <~ ")"
+    val moduleMemberImport = ident | typeIdent | classIdent
+    val mimport = sourced( "(" ~> "import" ~> moduleIdent ~ (withPrefix?) <~ ")" ^^ { case ident ~ prefix => ASTImport(ident, None, prefix) }
+                         | "(" ~> "import" ~> "(" ~> moduleIdent ~ (moduleMemberImport+) ~ ")" ~ (withPrefix?) <~ ")" ^^ { case ident ~ defs ~ _ ~ prefix => ASTImport(ident, Some(defs.toSet), prefix) } )
+
     val mexport = sourced( "(" ~> "export" ~> "(" ~> "module" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTModuleExport(ident) } )
 
     val moduleDefinition = mimport | mexport | define | dataType | typeclass | instance | declare
@@ -236,7 +240,7 @@ object SExpressionParser extends RegexParsers {
 
     var currFile: String = null
 
-    def apply[T <: ASTNode](file: String, input: String, parser: Parser[T] = program): T = {
+    def apply[T <: ASTNode](file: String, input: CharSequence, parser: Parser[T] = program): T = {
         currFile = file
         parseAll(parser, input) match {
             case Success(result, _) => result

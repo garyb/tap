@@ -12,6 +12,35 @@ case class DefinitionsLookup(tcons: Map[String, ModuleId],
     def addDCon(local: String, qn: ModuleId) = DefinitionsLookup(tcons, dcons + (local -> qn), tcs, members)
     def addClass(local: String, qn: ModuleId) = DefinitionsLookup(tcons, dcons, tcs + (local -> qn), members)
     def addMember(local: String, qn: ModuleId) = DefinitionsLookup(tcons, dcons, tcs, members + (local -> qn))
+
+    def addPrefix(prefix: String) = {
+        def addPrefix(kv: (String, ModuleId)) = (prefix + kv._1, kv._2)
+        DefinitionsLookup(tcons map addPrefix, dcons map addPrefix, tcs map addPrefix, members map addPrefix)
+    }
+
+    def select(inModule: String, fromModule: String, subset: Set[String]) = {
+
+        // TODO: this sucks
+
+        val grouped = subset groupBy { id =>
+            if (tcons.contains(id)) "tcons"
+            else if (dcons.contains(id)) "dcons"
+            else if (tcs.contains(id)) "tcs"
+            else if (members.contains(id)) "members"
+            else "invalid"
+        }
+
+        if (grouped.contains("invalid")) {
+            throw new Error("Module '" + inModule + "' attempted to import nonexistant definition(s) " + (grouped("invalid") mkString ", ") + " from '" + fromModule + "'")
+        }
+
+        DefinitionsLookup(
+            tcons.filterKeys { grouped("tcons") contains _ },
+            dcons.filterKeys { grouped("dcons") contains _ },
+            tcs.filterKeys { grouped("tcs") contains _ },
+            members.filterKeys { grouped("members") contains _ }
+        )
+    }
 }
 
 object DefinitionsLookup {

@@ -217,7 +217,7 @@ class ParserTests extends FlatSpec with ParserFixture {
                 ASTModule(
                     name = "Test",
                     exports = Set.empty,
-                    imports = Set("Prelude"),
+                    imports = Set(ASTImport("Prelude", None, None)),
                     datatypes = Nil,
                     typeclasses = Nil,
                     instances = Nil,

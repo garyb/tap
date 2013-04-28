@@ -1,7 +1,5 @@
 
-/bin
-/lib
-/*.iml
-/*.iws
-/*.ipr
-/.idea
+.idea
+.idea_modules
+target
+project/target

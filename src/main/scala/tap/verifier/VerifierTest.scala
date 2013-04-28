@@ -3,9 +3,9 @@ package tap.verifier
 import tap.types.Tyvar
 import tap.types.kinds.Star
 import tap.util.PrettyPrint._
-import tools.nsc.io.Directory
 import tap.util.trace
 import tap.{InstId, ModuleId}
+import java.io.File
 
 object VerifierTest {
 
@@ -15,11 +15,15 @@ object VerifierTest {
         if (args.length == 0) throw new Error("Tap classpath argument is missing")
 
         // Find all .stap files recursively
-        val files = args flatMap { cp => Directory(cp).deepFiles.filter(f => f.extension == "stap") }
+        val files = args flatMap { cp =>
+            val dir = new File(cp)
+            if (!dir.exists) throw new Error("Classpath directory " + dir.getAbsolutePath + " does not exist")
+            if (!dir.isDirectory) throw new Error("Classpath entry " + dir.getAbsolutePath + " is not a directory")
+            findSourceFiles(dir)
+        }
 
         // Run the verifier
-        val (moduleGroups, defs, ets) = VerifierFrontend(files)
-
+        val (moduleGroups, defs, ets) = FilesVerifier(files)
 
         moduleGroups foreach { moduleNames =>
             moduleNames foreach { mname =>
@@ -47,6 +51,17 @@ object VerifierTest {
                 }).toList.sortBy({ x => x }).mkString("\n\n"))
             }
         }
+    }
+
+    def findSourceFiles(dir: File): Array[File] = {
+        val allFiles = dir.listFiles()
+        val srcFiles = allFiles filter { f =>
+            val name = f.getName
+            val i = name.lastIndexOf('.')
+            f.isFile && i != -1 && name.substring(i) == ".stap"
+        }
+        val dirs = allFiles filter { _.isDirectory }
+        srcFiles ++ (dirs flatMap findSourceFiles)
     }
 
     def printTypeclassKind(ps: List[Tyvar]): String =

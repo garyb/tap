@@ -6,7 +6,7 @@ sealed trait ASTNode extends FilePositional
 
 case class ASTModule(name: String,
                      exports: Set[Export],
-                     imports: Set[String],
+                     imports: Set[ASTImport],
                      datatypes: List[ASTDataTypeDefinition],
                      typeclasses: List[ASTTypeClassDefinition],
                      instances: List[ASTTypeClassInstance],
@@ -16,7 +16,7 @@ case class ASTModule(name: String,
 // ---[ module-level ]-------------------------------------------------------------------------------------------------
 
 sealed trait ASTModuleMember extends ASTNode
-case class ASTImport(moduleName: String) extends ASTModuleMember
+case class ASTImport(moduleName: String, defs: Option[Set[String]], prefix: Option[String]) extends ASTModuleMember
 case class ASTModuleExport(moduleName: String) extends ASTModuleMember
 case class ASTDef(name: String, context: List[ASTTypeClassReference], ttype: ASTType) extends ASTModuleMember
 
