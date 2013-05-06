@@ -8,6 +8,6 @@ import tap.types.kinds._
 trait TypeFixture {
 
     def tTuple2(a: Type, b: Type): Type =
-        TAp(TAp(TCon(Tycon(ModuleId("Prelude", "Tuple2"), Kfun(Star, Kfun(Star, Star)))), a), b)
+        TAp(TAp(TCon(ModuleId("Prelude", "Tuple2"), Kfun(Star, Kfun(Star, Star))), a), b)
 
 }

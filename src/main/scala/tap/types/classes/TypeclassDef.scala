@@ -2,7 +2,7 @@ package tap.types.classes
 
 import tap.ModuleId
 import tap.ast.FilePositional
-import tap.types.Tyvar
+import tap.types.TVar
 
 /**
  * @param name The name of the typeclass
@@ -11,4 +11,4 @@ import tap.types.Tyvar
  * @param members The members defined by the typeclass.
  * @param defaultMembers The members in the typeclass that also have default implementations.
  */
-case class TypeclassDef(name: ModuleId, ps: List[IsIn], vs: List[Tyvar], members: Set[String], defaultMembers: Set[String]) extends FilePositional
+case class TypeclassDef(name: ModuleId, ps: List[IsIn], vs: List[TVar], members: Set[String], defaultMembers: Set[String]) extends FilePositional

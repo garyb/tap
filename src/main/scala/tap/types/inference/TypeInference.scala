@@ -30,7 +30,7 @@ object TypeInference {
      */
     def newTVar(k: Kind): Type = {
         tvId += 1
-        TVar(Tyvar("µ" + tvId, k))
+        TVar("µ" + tvId, k)
     }
     var tvId = 0
 
@@ -290,7 +290,7 @@ object TypeInference {
         val ts1 = ts map { applySubst(ctx1.s, _) }
         val fs = (as.values.toList map { applySubst(ctx1.s, _) } flatMap { tv(_) }).distinct
         val vss = ts1 map tv
-        val gs = (vss.foldLeft(List.empty[Tyvar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) }) diff fs
+        val gs = (vss.foldLeft(List.empty[TVar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) }) diff fs
         val (ds, rs) = split(ce, fs, ps1)
         val scs1 = ts1 map { t => Qual.quantify(gs, Qual(rs, t)) }
         val ctx2 = ctx1.foreach(es zip ts1) { case (ctx, (e, t)) => ctx.setNodeType(e, Qual(rs, t)) }

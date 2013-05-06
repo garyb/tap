@@ -15,7 +15,7 @@ object FilesVerifier {
         // Parse each file to aquire ASTs and store any modules found
         val asts = files.foldLeft(Map.empty[String, ASTModule]) { case (asts, file) =>
             SExpressionParser(file.getName, Source.fromFile(file).mkString) match {
-                case ast @ ASTModule(name, _, _, _, _, _, _, _) =>
+                case ast @ ASTModule(name, _) =>
                     if (asts contains name) throw DuplicateModuleError(name)
                     asts + (name -> ast)
             }

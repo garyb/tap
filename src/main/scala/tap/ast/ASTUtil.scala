@@ -73,9 +73,9 @@ object ASTUtil {
             val msn = LocalId("forall")
             val ki = KInfer.constrain(lookup, tcons, msn, List(msn), List(t))
             val km = KInfer.solve(ki, ast)
-            val ttvs = (ids map { p => p -> TVar(Tyvar(p, KInfer(km, Kvar(msn, p)))) }).toMap
+            val ttvs = (ids map { p => p -> TVar(p, KInfer(km, Kvar(msn, p))) }).toMap
             val tt = getType(lookup, tcons, tvs ++ ttvs, t)
-            quantify(ttvs.values.toList map { t => t.v }, tt)
+            quantify(ttvs.values.toList, tt)
     }
 
     /**

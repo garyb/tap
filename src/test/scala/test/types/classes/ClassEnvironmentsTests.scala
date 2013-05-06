@@ -21,7 +21,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
 
     it should "return a modified environment containing the class" in {
         val ps = List.empty
-        val vs = List(Tyvar("a", Star))
+        val vs = List(TVar("a", Star))
         val ce = addClass(nullEnv, TypeclassDef(idX, ps, vs, Set.empty, Set.empty))
         ce should be === Map(idX -> (vs, ps, List.empty))
     }
@@ -34,9 +34,9 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     }
 
     it should "throw an error if a class with the same name already exists" in {
-        val ce = addClass(nullEnv, TypeclassDef(idX, List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
+        val ce = addClass(nullEnv, TypeclassDef(idX, List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
         evaluating {
-            addClass(ce, TypeclassDef(idX, List.empty, List(Tyvar("b", Star)), Set.empty, Set.empty))
+            addClass(ce, TypeclassDef(idX, List.empty, List(TVar("b", Star)), Set.empty, Set.empty))
         } should produce [TIError]
     }
 
@@ -44,24 +44,24 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
         val id1 = idX
         val id2 = idY
         evaluating {
-            addClass(nullEnv, TypeclassDef(id2, List(IsIn(id1, List(TVar(Tyvar("b", Star))))), List(Tyvar("b", Star)), Set.empty, Set.empty))
+            addClass(nullEnv, TypeclassDef(id2, List(IsIn(id1, List(TVar("b", Star)))), List(TVar("b", Star)), Set.empty, Set.empty))
         } should produce [Error]
     }
 
     it should "throw an error if superclass context contains non-variable types" in {
         val id1 = idX
         val id2 = idY
-        val ce = addClass(nullEnv, TypeclassDef(id1, List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
+        val ce = addClass(nullEnv, TypeclassDef(id1, List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
         evaluating {
-            addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(Type.tString))), List(Tyvar("b", Star)), Set.empty, Set.empty))
+            addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(Type.tString))), List(TVar("b", Star)), Set.empty, Set.empty))
         } should produce [Error]
     }
 
     it should "add a class with a superclass to the environment if the superclass is already present" in {
         val id1 = idX
         val id2 = idY
-        val ce = addClass(nullEnv, TypeclassDef(id1, List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
-        addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(TVar(Tyvar("b", Star))))), List(Tyvar("b", Star)), Set.empty, Set.empty))
+        val ce = addClass(nullEnv, TypeclassDef(id1, List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
+        addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(TVar("b", Star)))), List(TVar("b", Star)), Set.empty, Set.empty))
     }
 
     //-------------------------------------------------------------------------
@@ -71,7 +71,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     it should "return a modified environment containing the instance" in {
         val id = ModuleId("Test", "TC")
         val ps = List.empty
-        val vs = List(Tyvar("a", Star))
+        val vs = List(TVar("a", Star))
         val ce1 = addClass(nullEnv, TypeclassDef(id, ps, vs, Set.empty, Set.empty))
         val inst = Inst("Test", List.empty, IsIn(id, List(Type.tString)))
         val ce2 = addInst(ce1, inst)
@@ -81,7 +81,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     it should "throw an error if the new instance is overlapping an existing instance" in {
         val id = ModuleId("Test", "TC")
         val ps = List.empty
-        val vs = List(Tyvar("a", Star))
+        val vs = List(TVar("a", Star))
         val ce1 = addClass(nullEnv, TypeclassDef(id, ps, vs, Set.empty, Set.empty))
         val inst = Inst("Test", List.empty, IsIn(id, List(Type.tString)))
         val ce2 = addInst(ce1, inst)
@@ -101,15 +101,15 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
          * constraint, as X is a superclass of Y
          */
 
-        val tvA = TVar(Tyvar("a", Star))
-        val tvB = TVar(Tyvar("b", Star))
-        val tvP = TVar(Tyvar("p", Star))
-        val tvQ = TVar(Tyvar("q", Star))
-        val tvX = TVar(Tyvar("x", Star))
-        val tvY = TVar(Tyvar("y", Star))
+        val tvA = TVar("a", Star)
+        val tvB = TVar("b", Star)
+        val tvP = TVar("p", Star)
+        val tvQ = TVar("q", Star)
+        val tvX = TVar("x", Star)
+        val tvY = TVar("y", Star)
 
-        val tcX = TypeclassDef(idX, List.empty, List(tvX.v), Set.empty, Set.empty)
-        val tcY = TypeclassDef(idY, List(IsIn(idX, List(tvY))), List(tvY.v), Set.empty, Set.empty)
+        val tcX = TypeclassDef(idX, List.empty, List(tvX), Set.empty, Set.empty)
+        val tcY = TypeclassDef(idY, List(IsIn(idX, List(tvY))), List(tvY), Set.empty, Set.empty)
 
         val instX = Inst("Test", List(IsIn(idX, List(tvA)), IsIn(idX, List(tvB))), IsIn(idX, List(tTuple2(tvA, tvB))))
         val instY = Inst("Test", List(IsIn(idY, List(tvP))), IsIn(idY, List(tTuple2(tvP, tvQ))))
@@ -125,10 +125,10 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     behavior of "sig"
 
     it should "return the type variable signature of the specified class" in {
-        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
-        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List.empty, List(Tyvar("b", Star), Tyvar("c", Star)), Set.empty, Set.empty))
-        sig(ce2, ModuleId("Test" ,"X")) should be === List(Tyvar("a", Star))
-        sig(ce2, ModuleId("Test" ,"Y")) should be === List(Tyvar("b", Star), Tyvar("c", Star))
+        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
+        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List.empty, List(TVar("b", Star), TVar("c", Star)), Set.empty, Set.empty))
+        sig(ce2, ModuleId("Test" ,"X")) should be === List(TVar("a", Star))
+        sig(ce2, ModuleId("Test" ,"Y")) should be === List(TVar("b", Star), TVar("c", Star))
     }
 
     //-------------------------------------------------------------------------
@@ -136,10 +136,10 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     behavior of "super"
 
     it should "return the type variable signature of the specified class" in {
-        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
-        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List(IsIn(idX, List(TVar(Tyvar("c", Star))))), List(Tyvar("b", Star), Tyvar("c", Star)), Set.empty, Set.empty))
+        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
+        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List(IsIn(idX, List(TVar("c", Star)))), List(TVar("b", Star), TVar("c", Star)), Set.empty, Set.empty))
         `super`(ce2, ModuleId("Test" ,"X")) should be === List.empty
-        `super`(ce2, ModuleId("Test" ,"Y")) should be === List(IsIn(idX, List(TVar(Tyvar("c", Star)))))
+        `super`(ce2, ModuleId("Test" ,"Y")) should be === List(IsIn(idX, List(TVar("c", Star))))
     }
 
     //-------------------------------------------------------------------------
@@ -147,8 +147,8 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     behavior of "insts"
 
     it should "return the instances of the specified class" in {
-        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(Tyvar("a", Star)), Set.empty, Set.empty))
-        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List.empty, List(Tyvar("b", Star)), Set.empty, Set.empty))
+        val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
+        val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List.empty, List(TVar("b", Star)), Set.empty, Set.empty))
         val ce3 = addInst(ce2, Inst("Test", List.empty, IsIn(idY, List(Type.tString))))
         insts(ce3, ModuleId("Test" ,"X")) should be === List.empty
         insts(ce3, ModuleId("Test" ,"Y")) should be === List(Inst("Test", List.empty, IsIn(idY, List(Type.tString))))

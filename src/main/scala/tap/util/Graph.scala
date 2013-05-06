@@ -66,4 +66,20 @@ object Graph {
         if (out forall { c => c.length == 1 }) out.flatten
         else throw new IllegalArgumentException("Cannot topologically sort non-acyclic graph")
     }
+
+    /**
+     * Finds all the successors of an item in a graph.
+     */
+    def successors[A](item: A, edges: Map[A, Iterable[A]]): Set[A] = {
+        def find(item: A, seen: Set[A] = Set.empty): Set[A] =
+            edges.get(item) match {
+                case Some(items) =>
+                    items.foldLeft(seen + item) { case (seen, item) =>
+                        if (seen contains item) seen
+                        else find(item, seen + item)
+                    }
+                case None => seen + item
+            }
+        find(item) - item
+    }
 }

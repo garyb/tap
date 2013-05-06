@@ -25,10 +25,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
 
-        val dtASTs = modules.flatMap { m => m.datatypes.map { dtd => ModuleId(m.name, dtd.name) -> dtd } }.toMap
-        val tcATSs = modules.flatMap { m => m.typeclasses.map { tcd => ModuleId(m.name, tcd.name) -> tcd } }.toMap
-        val instASTs = modules.flatMap { m => m.instances.map { tci => m.name -> tci } }
-        val mdASTs = modules.flatMap { m => m.memberDefs.map { md => m.name -> md } }
+        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataTypeDefinition => ModuleId(m.name, dtd.name) -> dtd } }.toMap
+        val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTTypeClassDefinition => ModuleId(m.name, tcd.name) -> tcd } }.toMap
+        val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTTypeClassInstance => m.name -> tci } }
+        val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
 
         var defs = verifiedDefs
         defs = addDataTypeDefs(dtASTs, defs)
@@ -81,10 +81,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     val k = dtd.params.foldRight(Star: Kind) { (p, k) => Kfun(pkinds(p), k) }
 
                     // The type constructor definition
-                    val tcon = TCon(Tycon(id, k))
+                    val tcon = TCon(id, k)
 
                     // Create a type environment containing just the parameters in the type constructor
-                    val penv = pkinds map { case (i, k) => i -> TVar(Tyvar(i, k)) }
+                    val penv = pkinds map { case (i, k) => i -> TVar(i, k) }
 
                     // The type that the data constructors for this type constructor will produce
                     val t = dtd.params.foldLeft(tcon: Type) { (t, p) => TAp(t, penv(p)) }
@@ -182,10 +182,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val km = KInfer.solve(kcs0 ++ kcs1, ast)
 
             // Extract kind for each parameter based on the solve mapping
-            val pts = tyvars.map { p => Tyvar(p, KInfer(km, Kvar(id, p))) }
+            val pts = tyvars.map { p => TVar(p, KInfer(km, Kvar(id, p))) }
 
             // Create the context predicates using the type vars
-            val tvs = (pts map { pt => pt.id -> TVar(Tyvar(pt.id, pt.k)) }).toMap
+            val tvs = (pts map { pt => pt.id -> pt }).toMap
             val contextParams = getPredicates(currLookup.tcs, tcs, context, tvs)
 
             // Extract names of members defined within the typeclass
@@ -236,7 +236,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     t
             }
 
-            val tvs = (ps flatMap { p => Substitutions.tv(p) } map { tv => tv.id -> TVar(tv) }).toMap
+            val tvs = (ps flatMap { p => Substitutions.tv(p) } map { tv => tv.id -> tv }).toMap
 
             val preds = getPredicates(tcIds, defs.tcs, context, tvs)
 
@@ -276,7 +276,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             val msntc = scopes(mId).tcs(tcName)
             val tc = defs.tcs(msntc)
-            val pred = IsIn(msntc, tc.vs map { p => TVar(p) })
+            val pred = IsIn(msntc, tc.vs)
 
             members.foldLeft(result) {
                 case (result, ast @ ASTTypeClassMemberDefinition(id, context, ttype)) =>
@@ -301,18 +301,22 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // TODO: warn or error on incomplete matches
 
-            val mis: Map[Id, TapExpr] = (m.memberImpls.map { mi =>
-                val id = ModuleId(mId, mi.name)
-                id -> TapNode.fromAST(mi.value, rs, id, Natives.types)
-            } ++
-            m.typeclasses.flatMap { tc => tc.members.collect { case ASTTypeClassMemberImplementation(name, tcm) =>
+            val mis: Map[Id, TapExpr] = (m.members.collect { case ASTLet(name, expr) =>
                 val id = ModuleId(mId, name)
-                id -> TapNode.fromAST(tcm, rs, id, Natives.types)
-            }} ++
-            m.instances.flatMap { tci => tci.members.map { case ASTTypeClassMemberImplementation(name, tcim) =>
-                val id = InstId(m.name, ms.tcs(tci.tcName), tci.params map { p => ASTUtil.getTConName(ms.tcons, p) }, name)
-                id -> TapNode.fromAST(tcim, rs, id, Natives.types)
-            }}).toMap
+                id -> TapNode.fromAST(expr, rs, id, Natives.types)
+            } ++
+            m.members.collect { case tc: ASTTypeClassDefinition =>
+                tc.members.collect { case ASTTypeClassMemberImplementation(name, tcm) =>
+                    val id = ModuleId(mId, name)
+                    id -> TapNode.fromAST(tcm, rs, id, Natives.types)
+                }
+            }.flatten ++
+            m.members.collect { case tci: ASTTypeClassInstance =>
+                tci.members.map { case ASTTypeClassMemberImplementation(name, tcim) =>
+                    val id = InstId(m.name, ms.tcs(tci.tcName), tci.params map { p => ASTUtil.getTConName(ms.tcons, p) }, name)
+                    id -> TapNode.fromAST(tcim, rs, id, Natives.types)
+                }
+            }.flatten).toMap
 
             val mDeps = mis mapValues { mi => TapNodeUtil.findImmediateDependencies(mi).toList } filter { case (id, deps) => deps.nonEmpty }
             val extDeps = mDeps.values.flatten.toSet.filter { id => !(mDeps contains id) }
@@ -338,7 +342,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
         val km = KInfer.solve(ki, ttype)
         val tvNames = ASTUtil.findTypeVars(ttype, Set.empty)
-        val tvs = (tvNames map { p => p -> TVar(Tyvar(p, KInfer(km, Kvar(qId, p)))) }).toMap
+        val tvs = (tvNames map { p => p -> TVar(p, KInfer(km, Kvar(qId, p))) }).toMap
         val ps1 = getPredicates(ms.tcs, defs.tcs, context, tvs)
         Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
     }
@@ -352,7 +356,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     case None => throw UnknownTypeVariableError(p, ast)
                     case Some(tv) =>
                         if (kind(tv) != k) throw KindMismatchError(p, kind(tv), k, ast)
-                        else TVar(Tyvar(p, k))
+                        else TVar(p, k)
                 }
             }
             IsIn(msntc, ps)
@@ -368,7 +372,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             val tcon = ASTUtil.getType(lookup, tcons, Map.empty, thing).asInstanceOf[TCon]
 
-            tcon.c.k match {
+            tcon.k match {
                 case Star if params.nonEmpty => throw TypeConstructorNoArgsError(tcon, t)
                 case Star => throw new Error("Illegal AST: AST Type apply with no parameters")
                 case k: Kfun =>
@@ -377,7 +381,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                             case ast @ ASTTypeVar(name) =>
                                 kind match {
                                     case Star => throw TypeConstructorTooManyArgsError(tcon, ast)
-                                    case Kfun(x, y) => (result + (name -> TVar(Tyvar(name, x))), y)
+                                    case Kfun(x, y) => (result + (name -> TVar(name, x)), y)
                                     case _: Kvar => throw new Error("param kind is Kvar")
                                 }
                             case _ => throw new Error("Illegal AST: type constructor is being applied with a non-typevar argument in parameters of typeclass.")

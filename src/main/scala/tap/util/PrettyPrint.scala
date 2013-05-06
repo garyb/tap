@@ -86,8 +86,6 @@ object PrettyPrint {
         else "class (" + (context map prettyPrint mkString ", ") + ") => " + prettyPrint(name) + " (" + params.map(prettyPrint).mkString(", ") + ")"
     }
 
-    def prettyPrint(tv: Tyvar): String = tv.id
-
     def prettyPrint(tci: Inst): String = {
         val Inst(mId, context, tc) = tci
         if (context.nonEmpty) "instance " + prettyPrint(tc.id) + " (" + (context map prettyPrint mkString ", ") + ") => " + (tc.ts map prettyPrint mkString ", ")
@@ -111,8 +109,8 @@ object PrettyPrint {
         }
 
         def loop(t: Type, grp: Boolean, top: Boolean = false): String = t match {
-            case TVar(Tyvar(name, _)) => name
-            case TCon(Tycon(name, _)) => prettyPrint(name)
+            case TVar(name, _) => name
+            case TCon(name, _) => prettyPrint(name)
                 // TODO: list prettyprinting
             //case TAp(t1, t2) if t1 == tList => "[" + loop(t2, false) + "]"
             case TAp(t1, t2) if t1 == tArrow => loop(t2, true)

@@ -56,23 +56,6 @@ object SExpressionParser extends RegexParsers {
         ASTMatch(ASTValueRead("Unit"), mcs :+ ASTCaseBranch(ASTWildcardValue, None, elseBranch))
     }
 
-    def createModule(name: String, members: List[ASTModuleMember]) = {
-        val imports = members.collect { case i: ASTImport => i }
-        val exports = members.collect {
-            case ASTDataTypeDefinition(id, _, dcons) => ExDataType(id, (dcons map { dcon => dcon.name }).toSet)
-            case ASTLet(id, _) => ExMember(id)
-            case ASTModuleExport(id) => ExModule(id)
-        } ++ (members.collect {
-            case ASTTypeClassDefinition(id, _, _, ms) => ExClass(id) :: (ms map { m => ExMember(m.name) })
-        }.flatten)
-        val datatypes = members.collect { case ast: ASTDataTypeDefinition => ast }
-        val typeclasses = members.collect { case ast: ASTTypeClassDefinition => ast }
-        val instances = members.collect { case ast: ASTTypeClassInstance => ast }
-        val memberDefs = members.collect { case ast: ASTDef => ast }
-        val memberImpls = members.collect { case ast: ASTLet => ast }
-        ASTModule(name, exports.toSet, imports.toSet, datatypes, typeclasses, instances, memberDefs, memberImpls)
-    }
-
     //  [ lexer-like rules ]  -----------------------------------------------------------------------------------------
 
     val ID = regex("""[^A-Z0-9\(\[\)\]#\s'][^\(\[\)\]\s]*"""r)
@@ -215,7 +198,7 @@ object SExpressionParser extends RegexParsers {
     //  [ parser behaviour ]  -----------------------------------------------------------------------------------------
 
     val exportIdent = ident | typeIdent
-    val program = "(" ~> "module" ~> moduleIdent ~ ")" ~ (moduleDefinition*) ^^ { case module ~ _ ~ members => createModule(module, members) }
+    val program = "(" ~> "module" ~> moduleIdent ~ ")" ~ (moduleDefinition*) ^^ { case module ~ _ ~ members => ASTModule(module, members) }
 
     protected val comments = """(;[^\n]*[\s\r\n]*)+"""r
 

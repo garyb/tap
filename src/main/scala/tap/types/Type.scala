@@ -9,14 +9,11 @@ import language.implicitConversions
 import language.reflectiveCalls
 
 sealed trait Type
-case class TVar(v: Tyvar) extends Type
-case class TCon(c: Tycon) extends Type
+case class TVar(id: String, k: Kind) extends Type
+case class TCon(id: ModuleId, k: Kind) extends Type
 case class TAp(f: Type, a: Type) extends Type
 case class TGen(fi: Int, i: Int) extends Type
 case class Forall(i: Int, ks: List[Kind], t: Type) extends Type
-
-case class Tycon(id: ModuleId, k: Kind)
-case class Tyvar(id: String, k: Kind)
 
 object Type {
 
@@ -29,14 +26,14 @@ object Type {
 
     private def id(name: String) = ModuleId("Prelude", name)
 
-    val tArrow: Type  = TCon(Tycon(id("->"), Kfun(Star, Kfun(Star, Star))))
-    val tNumber: Type = TCon(Tycon(id("Number"), Star))
-    val tString: Type = TCon(Tycon(id("String"), Star))
-    val tBool: Type   = TCon(Tycon(id("Bool"), Star))
-    val tUnit: Type   = TCon(Tycon(id("Unit"), Star))
-    val tList: Type   = TCon(Tycon(id("List"), Kfun(Star, Star)))
-    val tVar: Type    = TCon(Tycon(id("Var"), Star))
-    val tAny: Type    = Type.quantify(List(Tyvar("a", Star)), TVar(Tyvar("a", Star)))
+    val tArrow: Type  = TCon(id("->"), Kfun(Star, Kfun(Star, Star)))
+    val tNumber: Type = TCon(id("Number"), Star)
+    val tString: Type = TCon(id("String"), Star)
+    val tBool: Type   = TCon(id("Bool"), Star)
+    val tUnit: Type   = TCon(id("Unit"), Star)
+    val tList: Type   = TCon(id("List"), Kfun(Star, Star))
+    val tVar: Type    = TCon(id("Var"), Star)
+    val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))
 
     /**
      * Constructs a function type.
@@ -48,7 +45,7 @@ object Type {
      * is a TCon or an application of a TCon.
      */
     def getTConID(t: Type): ModuleId = t match {
-        case TCon(tc) => tc.id
+        case TCon(id, _) => id
         case TAp(t, _) => getTConID(t)
         case _ => throw new IllegalArgumentException("non-TCon or TAp in getTConID: " + t)
     }
@@ -102,7 +99,7 @@ object Type {
     /**
      * Universally quantifies t using the specified type variables.
      */
-    def quantify(vs: List[Tyvar], t: Type): Type = {
+    def quantify(vs: List[TVar], t: Type): Type = {
         val vs1 = Substitutions.tv(t) collect { case v if vs contains v => v }
         if (vs1.isEmpty) t
         else {

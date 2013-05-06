@@ -8,7 +8,7 @@ import tap.interpreter.{InterpreterRuntimeError, InterpreterNatives}
 import tap.ir._
 import tap.types.Natives._
 import tap.types.kinds.Star
-import tap.types.{Natives, TCon, Tycon}
+import tap.types.{Natives, TCon}
 import tap.{Id, LocalId, ModuleId}
 import test.InterpreterFixture
 
@@ -85,7 +85,7 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
     }
 
     it should "evaluate the contents of cast expressions" in {
-        eval(CastExpr(eTrue, TCon(Tycon(ModuleId("Prelude", "Boolean"), Star)))) should be === iTrue
+        eval(CastExpr(eTrue, TCon(ModuleId("Prelude", "Boolean"), Star))) should be === iTrue
     }
 
     it should "throw an exception When a runtime error is raised" in {

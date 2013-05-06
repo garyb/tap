@@ -17,22 +17,22 @@ class UnifyTests extends FlatSpec {
     behavior of "varBind"
 
     it should "create nothing when the type variable and type have mismatched kinds" in {
-        val a = Tyvar("a", Star)
+        val a = TVar("a", Star)
         varBind(a, tList) should be === None
     }
 
     it should "create nothing when the variable is contained within the type being bound - a recursive type" in {
-        val a = Tyvar("a", Star)
-        varBind(a, TAp(tList, TVar(a))) should be === None
+        val a = TVar("a", Star)
+        varBind(a, TAp(tList, a)) should be === None
     }
 
     it should "create an empty substitution when a type variable and type are the same" in {
-        val a = Tyvar("a", Star)
-        varBind(a, TVar(a)) should be === Some(nullSubst)
+        val a = TVar("a", Star)
+        varBind(a, a) should be === Some(nullSubst)
     }
 
     it should "create a substitution for a type variable and type with matching kinds" in {
-        val a = Tyvar("a", Star)
+        val a = TVar("a", Star)
         varBind(a, tNumber) should be === Some(Map(a -> tNumber))
     }
 
@@ -41,15 +41,15 @@ class UnifyTests extends FlatSpec {
     behavior of "mgu"
 
     it should "create a substitution for type variables" in {
-        val a = Tyvar("a", Star)
-        mgu(TVar(a), tString) should be === Some(Map(a -> tString))
-        mgu(tString, TVar(a)) should be === Some(Map(a -> tString))
+        val a = TVar("a", Star)
+        mgu(a, tString) should be === Some(Map(a -> tString))
+        mgu(tString, a) should be === Some(Map(a -> tString))
     }
 
     it should "create a substitution for type variables inside matching TAps" in {
-        val a = Tyvar("a", Kfun(Star, Star))
-        val b = Tyvar("b", Star)
-        mgu(TAp(TVar(a), TVar(b)), TAp(tList, tString)) should
+        val a = TVar("a", Kfun(Star, Star))
+        val b = TVar("b", Star)
+        mgu(TAp(a, b), TAp(tList, tString)) should
             be === Some(Map(a -> tList, b -> tString))
     }
 
@@ -71,8 +71,8 @@ class UnifyTests extends FlatSpec {
     }
 
     it should "create a substitution for type variables inside matching foralls" in {
-        val a = Tyvar("a", Star)
-        mgu(Forall(0, List(Star), TAp(TGen(0, 0), TVar(a))), Forall(0, List(Star), TAp(TGen(0, 0), tString))) should be === Some(Map(a -> tString))
+        val a = TVar("a", Star)
+        mgu(Forall(0, List(Star), TAp(TGen(0, 0), a)), Forall(0, List(Star), TAp(TGen(0, 0), tString))) should be === Some(Map(a -> tString))
     }
 
     it should "create nothing for mismatched foralls" in {
@@ -85,17 +85,17 @@ class UnifyTests extends FlatSpec {
     behavior of "mgus"
 
     it should "produce a nothing for mismatched lists of types" in {
-        val a = Tyvar("a", Star)
-        mgus(List(TVar(a), TVar(a)), List(tString, tNumber)) should be === None
-        mgus(List(TVar(a)), List(tString, tNumber)) should be === None
+        val a = TVar("a", Star)
+        mgus(List(a, a), List(tString, tNumber)) should be === None
+        mgus(List(a), List(tString, tNumber)) should be === None
         mgus(List(tNumber), List(tString, tString)) should be === None
     }
 
     it should "produce a substitution for lists of types" in {
-        val a = Tyvar("a", Star)
-        val b = Tyvar("b", Kfun(Star, Star))
-        val c = Tyvar("c", Star)
-        mgus(List(TVar(a), TAp(TVar(b), TVar(c))), List(tString, TAp(tList, tString))) should be === Some(Map(a -> tString, b -> tList, c -> tString))
+        val a = TVar("a", Star)
+        val b = TVar("b", Kfun(Star, Star))
+        val c = TVar("c", Star)
+        mgus(List(a, TAp(b, c)), List(tString, TAp(tList, tString))) should be === Some(Map(a -> tString, b -> tList, c -> tString))
     }
 
     //-------------------------------------------------------------------------
@@ -107,16 +107,16 @@ class UnifyTests extends FlatSpec {
     }
 
     it should "extend the current substitution with the mgu of two types" in {
-        val a = Tyvar("a", Star)
-        unify(TVar(a), tString, nullSubst, NullFilePosition) should be === Map(a -> tString)
+        val a = TVar("a", Star)
+        unify(a, tString, nullSubst, NullFilePosition) should be === Map(a -> tString)
     }
 
     it should "apply the current substitution before finding the mgu" in {
-        val l = Tyvar("l", Kfun(Star, Star))
-        val x = Tyvar("x", Star)
-        val a = Tyvar("a", Star)
+        val l = TVar("l", Kfun(Star, Star))
+        val x = TVar("x", Star)
+        val a = TVar("a", Star)
         val s = Map(x -> tString, l -> tList)
-        unify(TAp(tList, TVar(a)), TAp(TVar(l), TVar(x)), s, NullFilePosition) should
+        unify(TAp(tList, a), TAp(l, x), s, NullFilePosition) should
             be === s + (a -> tString)
     }
 
@@ -125,15 +125,15 @@ class UnifyTests extends FlatSpec {
     behavior of "`match`"
 
     it should "create a substitution only for type variables on the left" in {
-        val a = Tyvar("a", Star)
-        `match`(TVar(a), tString) should be === Some(Map(a -> tString))
-        `match`(tString, TVar(a)) should be === None
+        val a = TVar("a", Star)
+        `match`(a, tString) should be === Some(Map(a -> tString))
+        `match`(tString, a) should be === None
     }
 
     it should "create a substitution for type variables inside matching TAps" in {
-        val a = Tyvar("a", Kfun(Star, Star))
-        val b = Tyvar("b", Star)
-        `match`(TAp(TVar(a), TVar(b)), TAp(tList, tString)) should
+        val a = TVar("a", Kfun(Star, Star))
+        val b = TVar("b", Star)
+        `match`(TAp(a, b), TAp(tList, tString)) should
             be === Some(Map(a -> tList, b -> tString))
     }
 
@@ -155,8 +155,8 @@ class UnifyTests extends FlatSpec {
     }
 
     it should "create a substitution for type variables inside matching foralls" in {
-        val a = Tyvar("a", Star)
-        `match`(Forall(0, List(Star), TAp(TGen(0, 0), TVar(a))), Forall(0, List(Star), TAp(TGen(0, 0), tString))) should be === Some(Map(a -> tString))
+        val a = TVar("a", Star)
+        `match`(Forall(0, List(Star), TAp(TGen(0, 0), a)), Forall(0, List(Star), TAp(TGen(0, 0), tString))) should be === Some(Map(a -> tString))
     }
 
     it should "create nothing for mismatched foralls" in {
@@ -169,16 +169,16 @@ class UnifyTests extends FlatSpec {
     behavior of "matches"
 
     it should "produce a nothing for mismatched lists of types" in {
-        val a = Tyvar("a", Star)
-        matches(List(TVar(a), TVar(a)), List(tString, tNumber)) should be === None
-        matches(List(TVar(a)), List(tString, tNumber)) should be === None
+        val a = TVar("a", Star)
+        matches(List(a, a), List(tString, tNumber)) should be === None
+        matches(List(a), List(tString, tNumber)) should be === None
         matches(List(tNumber), List(tString, tString)) should be === None
     }
 
     it should "produce a substitution for lists of types" in {
-        val a = Tyvar("a", Star)
-        val b = Tyvar("b", Kfun(Star, Star))
-        val c = Tyvar("c", Star)
-        matches(List(TVar(a), TAp(TVar(b), TVar(c))), List(tString, TAp(tList, tString))) should be === Some(Map(a -> tString, b -> tList, c -> tString))
+        val a = TVar("a", Star)
+        val b = TVar("b", Kfun(Star, Star))
+        val c = TVar("c", Star)
+        matches(List(a, TAp(b, c)), List(tString, TAp(tList, tString))) should be === Some(Map(a -> tString, b -> tList, c -> tString))
     }
  }

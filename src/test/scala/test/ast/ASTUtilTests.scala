@@ -154,10 +154,10 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "TestB" -> ModuleId("Test", "TestB")
         )
         val tcons = Map(
-            ModuleId("Test", "TestA") -> TCon(Tycon(ModuleId("Test", "TestA"), Star))
+            ModuleId("Test", "TestA") -> TCon(ModuleId("Test", "TestA"), Star)
         )
         getType(lookup, tcons, Map.empty, ASTTypeCon("TestA")) should be ===
-                TCon(Tycon(ModuleId("Test", "TestA"), Star))
+                TCon(ModuleId("Test", "TestA"), Star)
     }
 
     it should "throw an error if a TCon is missing from the lookup" in {
@@ -171,8 +171,8 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
     it should "return the correct TVar in" in {
         val tvs = Map(
-            "a" -> TVar(Tyvar("a", Star)),
-            "b" -> TVar(Tyvar("b", Star))
+            "a" -> TVar("a", Star),
+            "b" -> TVar("b", Star)
         )
         getType(Map.empty, Map.empty, tvs, ASTTypeVar("b")) should be ===
             tvs("b")
@@ -184,15 +184,15 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
     it should "return TAps" in {
         val tvs = Map(
-            "a" -> TVar(Tyvar("a", Kfun(Star, Kfun(Star, Star)))),
-            "b" -> TVar(Tyvar("b", Star))
+            "a" -> TVar("a", Kfun(Star, Kfun(Star, Star))),
+            "b" -> TVar("b", Star)
         )
         getType(Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b")))) should be ===
                 TAp(TAp(tvs("a"), tvs("b")), tvs("b"))
     }
 
     it should "return function types without arguments" in {
-        val tvs = Map("a" -> TVar(Tyvar("a", Star)))
+        val tvs = Map("a" -> TVar("a", Star))
 
         getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a")))) should be ===
                 TAp(TAp(tArrow, tUnit), tvs("a"))
@@ -200,9 +200,9 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
     it should "return function types with arguments" in {
         val tvs = Map(
-            "a" -> TVar(Tyvar("a", Star)),
-            "b" -> TVar(Tyvar("b", Star)),
-            "c" -> TVar(Tyvar("c", Star))
+            "a" -> TVar("a", Star),
+            "b" -> TVar("b", Star),
+            "c" -> TVar("c", Star)
         )
 
         getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b")))) should be ===
@@ -214,12 +214,12 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
     it should "return Foralls as needed" in {
         val lookup = Map("String" -> ModuleId("Prelude", "String"))
-        val tcons = Map(ModuleId("Prelude", "String") -> TCon(Tycon(ModuleId("Prelude", "String"), Star)))
+        val tcons = Map(ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star))
         val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))
         t1 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn TGen(lastForallId, 0)) fn tString)
 
         When("quantified variables already exist in the tvs list, they should be hidden inside the forall")
-        val tvs = Map("a" -> TVar(Tyvar("a", Star)), "b" -> TVar(Tyvar("b", Star)))
+        val tvs = Map("a" -> TVar("a", Star), "b" -> TVar("b", Star))
         val t2 = getType(lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))
         t2 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn (tvs("b") fn TGen(lastForallId, 0))) fn tvs("a"))
     }
@@ -230,8 +230,8 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "String" -> ModuleId("Prelude", "String")
         )
         val tcons = Map(
-            ModuleId("Prelude", "List") -> TCon(Tycon(ModuleId("Prelude", "List"), Kfun(Star, Star))),
-            ModuleId("Prelude", "String") -> TCon(Tycon(ModuleId("Prelude", "String"), Star))
+            ModuleId("Prelude", "List") -> TCon(ModuleId("Prelude", "List"), Kfun(Star, Star)),
+            ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star)
         )
 
         evaluating {

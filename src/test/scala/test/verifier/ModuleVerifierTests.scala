@@ -20,11 +20,11 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     val nullScopes = Map("Test" -> DefinitionsLookup.empty)
     val testDefs =
         ModuleDefinitions(
-            Map(ModuleId("Test", "X") -> TCon(Tycon(ModuleId("Test", "X"), Star))),
-            Map(ModuleId("Test", "X") -> TCon(Tycon(ModuleId("Test", "X"), Star))),
+            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
+            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
             Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, Nil, Set.empty, Set.empty)),
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
-            Map(ModuleId("Test", "z") -> Qual(Nil, TCon(Tycon(ModuleId("Test", "X"), Star)))),
+            Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star))),
             Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X"))))
 
     // ------------------------------------------------------------------------
@@ -59,21 +59,21 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataTypeDefinition("A", Nil, Nil)
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
-        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(Tycon(ModuleId("Test", "A"), Star)))
+        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle type constructors with type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataTypeDefinition("A", List("p", "q"), Nil)
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
-        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(Tycon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star)))))
+        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))))
     }
 
     it should "handle data constructors with no arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", Nil)))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
-        defs.dcons should be === Map(ModuleId("Test", "B") -> TCon(Tycon(ModuleId("Test", "A"), Star)))
+        defs.dcons should be === Map(ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle data constructors with non-type variable arguments" in {
@@ -83,8 +83,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val dtd1 = ASTDataTypeDefinition("A", Nil, Nil)
         val dtd2 = ASTDataTypeDefinition("B", Nil, List(ASTDataTypeConstructor("B", List(ASTTypeCon("A")))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
-        val tA = TCon(Tycon(ModuleId("Test", "A"), Star))
-        val tB = TCon(Tycon(ModuleId("Test", "B"), Star))
+        val tA = TCon(ModuleId("Test", "A"), Star)
+        val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === Map(
             ModuleId("Test", "B") -> (tA fn tB)
         )
@@ -97,8 +97,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val dtd1 = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("A", List(ASTTypeCon("B")))))
         val dtd2 = ASTDataTypeDefinition("B", Nil, List(ASTDataTypeConstructor("B", List(ASTTypeCon("A")))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
-        val tA = TCon(Tycon(ModuleId("Test", "A"), Star))
-        val tB = TCon(Tycon(ModuleId("Test", "B"), Star))
+        val tA = TCon(ModuleId("Test", "A"), Star)
+        val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === Map(
             ModuleId("Test", "A") -> (tB fn tA),
             ModuleId("Test", "B") -> (tA fn tB)
@@ -110,7 +110,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             .addTCon("A", ModuleId("Test", "A"))))
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", List(ASTTypeCon("A")))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
-        val tA = TCon(Tycon(ModuleId("Test", "A"), Star))
+        val tA = TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === Map(
             ModuleId("Test", "B") -> (tA fn tA)
         )
@@ -121,7 +121,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val dtd = ASTDataTypeDefinition("A", List("p", "q"), List(ASTDataTypeConstructor("B", List(ASTTypeVar("p"), ASTTypeVar("q")))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
-        val fa = Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TAp(TAp(TCon(Tycon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star)))), TGen(fi, 0)), TGen(fi, 1))))
+        val fa = Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1))))
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
     }
 
@@ -130,7 +130,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val dtd = ASTDataTypeDefinition("A", List("p", "q"), List(ASTDataTypeConstructor("B", List(ASTTypeApply(ASTTypeVar("p"), List(ASTTypeVar("q")))))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
-        val fa = Forall(fi, List(Kfun(Star, Star), Star), TAp(TGen(fi, 0), TGen(fi, 1)) fn TAp(TAp(TCon(Tycon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star)))), TGen(fi, 0)), TGen(fi, 1)))
+        val fa = Forall(fi, List(Kfun(Star, Star), Star), TAp(TGen(fi, 0), TGen(fi, 1)) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1)))
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
     }
 
@@ -145,7 +145,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", List(ASTForall(List("a"), ASTTypeVar("a"))))))
         val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
-        val fa = Forall(fi, List(Star), TGen(fi, 0)) fn TCon(Tycon(ModuleId("Test", "A"), Star))
+        val fa = Forall(fi, List(Star), TGen(fi, 0)) fn TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
     }
 
@@ -153,8 +153,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataTypeDefinition("A", Nil, List(ASTDataTypeConstructor("B", Nil)))
         val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), testDefs)
-        dcons should be === testDefs.dcons + (ModuleId("Test", "A") -> TCon(Tycon(ModuleId("Test", "A"), Star)))
-        tcons should be === testDefs.tcons + (ModuleId("Test", "B") -> TCon(Tycon(ModuleId("Test", "A"), Star)))
+        dcons should be === testDefs.dcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
+        tcons should be === testDefs.tcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
         tcs should be === testDefs.tcs
         tcis should be === testDefs.tcis
         mts should be === testDefs.mts
@@ -181,7 +181,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tc = ASTTypeClassDefinition("A", Nil, List("a"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty)
         )
     }
 
@@ -190,7 +190,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tc = ASTTypeClassDefinition("A", Nil, List("a", "b", "c"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star), Tyvar("b", Star), Tyvar("c", Star)), Set.empty, Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star), TVar("b", Star), TVar("c", Star)), Set.empty, Set.empty)
         )
     }
 
@@ -253,8 +253,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tcB = ASTTypeClassDefinition("B", List(ASTTypeClassReference("A", List("b"))), List("b"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tcA, ModuleId("Test", "B") -> tcB), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty),
-            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), List(IsIn(ModuleId("Test", "A"), List(TVar(Tyvar("b", Star))))), List(Tyvar("b", Star)), Set.empty, Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty),
+            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), List(IsIn(ModuleId("Test", "A"), List(TVar("b", Star)))), List(TVar("b", Star)), Set.empty, Set.empty)
         )
     }
 
@@ -268,9 +268,9 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tcC = ASTTypeClassDefinition("C", List(ASTTypeClassReference("A", List("c")), ASTTypeClassReference("B", List("c"))), List("c"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tcA, ModuleId("Test", "B") -> tcB, ModuleId("Test", "C") -> tcC), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty),
-            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), Nil, List(Tyvar("b", Star)), Set.empty, Set.empty),
-            ModuleId("Test", "C") -> TypeclassDef(ModuleId("Test", "C"), List(IsIn(ModuleId("Test", "A"), List(TVar(Tyvar("c", Star)))), IsIn(ModuleId("Test", "B"), List(TVar(Tyvar("c", Star))))), List(Tyvar("c", Star)), Set.empty, Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty),
+            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), Nil, List(TVar("b", Star)), Set.empty, Set.empty),
+            ModuleId("Test", "C") -> TypeclassDef(ModuleId("Test", "C"), List(IsIn(ModuleId("Test", "A"), List(TVar("c", Star))), IsIn(ModuleId("Test", "B"), List(TVar("c", Star)))), List(TVar("c", Star)), Set.empty, Set.empty)
         )
     }
 
@@ -284,9 +284,9 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tcC = ASTTypeClassDefinition("C", List(ASTTypeClassReference("A", List("y")), ASTTypeClassReference("B", List("x"))), List("x", "y"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tcA, ModuleId("Test", "B") -> tcB, ModuleId("Test", "C") -> tcC), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty),
-            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), Nil, List(Tyvar("b", Star)), Set.empty, Set.empty),
-            ModuleId("Test", "C") -> TypeclassDef(ModuleId("Test", "C"), List(IsIn(ModuleId("Test", "A"), List(TVar(Tyvar("y", Star)))), IsIn(ModuleId("Test", "B"), List(TVar(Tyvar("x", Star))))), List(Tyvar("x", Star), Tyvar("y", Star)), Set.empty, Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty),
+            ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), Nil, List(TVar("b", Star)), Set.empty, Set.empty),
+            ModuleId("Test", "C") -> TypeclassDef(ModuleId("Test", "C"), List(IsIn(ModuleId("Test", "A"), List(TVar("y", Star))), IsIn(ModuleId("Test", "B"), List(TVar("x", Star)))), List(TVar("x", Star), TVar("y", Star)), Set.empty, Set.empty)
         )
     }
 
@@ -294,11 +294,11 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
-        val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Kfun(Star, Star))), Set.empty, Set.empty))))
+        val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Kfun(Star, Star))), Set.empty, Set.empty))))
         val tc = ASTTypeClassDefinition("B", List(ASTTypeClassReference("A", List("b"))), List("b"), Nil)
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "B") -> tc), defs0)
         defs.tcs should be === defs0.tcs +
-            (ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), List(IsIn(ModuleId("Test", "A"), List(TVar(Tyvar("b", Kfun(Star, Star)))))), List(Tyvar("b", Kfun(Star, Star))), Set.empty, Set.empty))
+            (ModuleId("Test", "B") -> TypeclassDef(ModuleId("Test", "B"), List(IsIn(ModuleId("Test", "A"), List(TVar("b", Kfun(Star, Star))))), List(TVar("b", Kfun(Star, Star))), Set.empty, Set.empty))
     }
 
     it should "throw an error for typeclass members that don't use the class type variables" in {
@@ -349,7 +349,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val tc = ASTTypeClassDefinition("A", Nil, List("a", "b"), List(ASTTypeClassMemberDefinition("do-a", Nil, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))))))
         val defs = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), nullDefs)
         defs.tcs should be === Map(
-            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Kfun(Star, Star)), Tyvar("b", Star)), Set("do-a"), Set.empty)
+            ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Kfun(Star, Star)), TVar("b", Star)), Set("do-a"), Set.empty)
         )
     }
 
@@ -357,7 +357,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addClass("A", ModuleId("Test", "A"))
             .addClass("B", ModuleId("Test", "B"))))
-        val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Kfun(Star, Star))), Set.empty, Set.empty))))
+        val defs0 = nullDefs.copy(tcs = (nullDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Kfun(Star, Star))), Set.empty, Set.empty))))
         val tc = ASTTypeClassDefinition("B", List(ASTTypeClassReference("A", List("b"))), List("b"), List(ASTTypeClassMemberDefinition("do-b", Nil, ASTTypeApply(ASTTypeVar("b"), List(ASTTypeVar("b"))))))
         evaluating {
             v.addTypeclassDefs(Map(ModuleId("Test", "B") -> tc), defs0)
@@ -370,7 +370,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), testDefs)
         dcons should be === testDefs.dcons
         tcons should be === testDefs.tcons
-        tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(Tyvar("a", Star)), Set.empty, Set.empty))
+        tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty))
         tcis should be === testDefs.tcis
         mts should be === testDefs.mts
         (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>

@@ -199,20 +199,19 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 val scs = ps map { p => predToType(p, tcons) }
 
                 // Generate argument types for the members
-                val paramTypes = vs map { tv => TVar(tv) }
                 val tcmts = memberIds.toList map { m =>
                     val sc = mts(ModuleId(mId, m))
                     if (sc.ps(0).id != msn) throw new Error("Typeclass member incorrect predicate found - " + m + " :: " + prettyPrint(sc))
-                    val qt = freshInstPartial(paramTypes, sc)
+                    val qt = freshInstPartial(vs, sc)
                     val tvs = tv(qt) filterNot { tv => vs contains tv }
                     if (tvs.nonEmpty) Qual.quantify(tvs, qt).h else qt.h
                 }
 
                 // Build the type constructor for the typeclass
-                val tcon = TCon(Tycon(tconName, (vs map kind).foldRight(Star: Kind)(Kfun.apply)))
+                val tcon = TCon(tconName, (vs map kind).foldRight(Star: Kind)(Kfun.apply))
 
                 // Create an instantiated type from the type constructor
-                val t = vs.foldLeft(tcon: Type) { (rt, v) => TAp(rt, TVar(v)) }
+                val t = vs.foldLeft(tcon: Type) { (rt, v) => TAp(rt, v) }
 
                 // Create the data constructor type - a function type that accepts superclass and member argument types
                 // and returns the instantiated type constructor.
@@ -692,7 +691,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 throw new Error("Type already has some satisfied predicates: " + prettyPrint(qt))
             }
 
-            def transform(t: Type, ps: List[IsIn], tvs: Set[Tyvar]): List[List[IsIn]] = t match {
+            def transform(t: Type, ps: List[IsIn], tvs: Set[TVar]): List[List[IsIn]] = t match {
                 case TAp(TAp(f, a), b) if f == tArrow =>
                     val tvs1 = tvs ++ tv(a)
                     val psSat = ps filter { p => tv(p) forall { tv => tvs1 contains tv } }

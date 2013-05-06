@@ -95,6 +95,6 @@ object IsIn {
      * Splits a list of predicates into deferred and retained predicates. The deferred predicates are passed out as
      * constraints to the enclosing scope, the retained predicates are used to form the current type.
      */
-    def split(ce: ClassEnv, vs: List[Tyvar], ps: List[IsIn]): (List[IsIn], List[IsIn]) =
+    def split(ce: ClassEnv, vs: List[TVar], ps: List[IsIn]): (List[IsIn], List[IsIn]) =
         reduce(ce, ps) partition { p => tv(p) forall { tv => vs contains tv } }
 }

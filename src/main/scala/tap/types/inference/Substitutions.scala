@@ -5,7 +5,7 @@ import tap.types.classes.{Qual, IsIn}
 
 object Substitutions {
 
-    type Subst = Map[Tyvar, Type]
+    type Subst = Map[TVar, Type]
 
     def nullSubst: Subst = Map.empty
 
@@ -14,7 +14,7 @@ object Substitutions {
      */
     def applySubst(s: Subst, t: Type): Type =
         t match {
-            case TVar(u) => s.get(u) match {
+            case u: TVar => s.get(u) match {
                 case Some(t) => t
                 case _ => t
             }
@@ -36,8 +36,8 @@ object Substitutions {
     /**
      * Finds the type variable used within a type.
      */
-    def tv(t: Type): List[Tyvar] = t match {
-        case TVar(u) => List(u)
+    def tv(t: Type): List[TVar] = t match {
+        case u: TVar => List(u)
         case TAp(l, r) => (tv(l) ++ tv(r)).distinct
         case Forall(_, _, t) => tv(t)
         case t => List.empty
@@ -46,12 +46,12 @@ object Substitutions {
     /**
      * Finds the type variables used in a predicated type.
      */
-    def tv(t: IsIn): List[Tyvar] = (t.ts flatMap { t => tv(t) }).distinct
+    def tv(t: IsIn): List[TVar] = (t.ts flatMap { t => tv(t) }).distinct
 
     /**
      * Finds the type variables used within a qualified type.
      */
-    def tv(qt: Qual[Type]): List[Tyvar] = ((qt.ps flatMap tv) ++ tv(qt.h)).distinct
+    def tv(qt: Qual[Type]): List[TVar] = ((qt.ps flatMap tv) ++ tv(qt.h)).distinct
 
     /**
      * Composes two substitutions.
@@ -64,7 +64,7 @@ object Substitutions {
      */
     def merge(s1: Subst, s2: Subst): Option[Subst] = {
         val tvars = s1.keySet intersect s2.keySet
-        val agree = tvars forall { v => applySubst(s1, TVar(v)) == applySubst(s2, TVar(v)) }
+        val agree = tvars forall { v => applySubst(s1, v) == applySubst(s2, v) }
         if (agree) Some(s1 ++ s2) else None
     }
 }

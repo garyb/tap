@@ -111,4 +111,35 @@ class GraphTests extends FlatSpec {
         evaluating { Graph.tsort(edges) } should produce [IllegalArgumentException]
     }
 
+    behavior of "successors"
+
+    it should "return an empty set for items not in the edges list" in {
+        Graph.successors("A", Map.empty[String, Iterable[String]]) should be === Set.empty
+    }
+
+    it should "find all the successors of an item" in {
+        val edges = Map(
+            "A" -> Set("P"),
+            "B" -> Set("Q"),
+            "C" -> Set("R"),
+            "Z" -> Set.empty[String],
+            "P" -> Set("R"),
+            "Q" -> Set("P")
+        )
+        Graph.successors("A", edges) should be === Set("P", "R")
+        Graph.successors("B", edges) should be === Set("Q", "P", "R")
+        Graph.successors("C", edges) should be === Set("R")
+        Graph.successors("P", edges) should be === Set("R")
+        Graph.successors("Q", edges) should be === Set("P", "R")
+    }
+
+    it should "handle graphs with components" in {
+        val edges = Map(
+            "A" -> Set("B", "C"),
+            "B" -> Set("A")
+        )
+        Graph.successors("A", edges) should be === Set("B", "C")
+        Graph.successors("B", edges) should be === Set("A", "C")
+    }
+
 }

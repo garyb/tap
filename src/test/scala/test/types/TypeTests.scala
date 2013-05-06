@@ -15,22 +15,22 @@ class TypeTests extends FlatSpec {
 
     it should "return the ID when the input is a TCon" in {
         val id = ModuleId("Test", "Test")
-        getTConID(TCon(Tycon(id, Star))) should be === id
+        getTConID(TCon(id, Star)) should be === id
     }
 
     it should "extract a TCon from the left hand side of a TAp" in {
         val id = ModuleId("Test", "Test")
-        getTConID(TAp(TCon(Tycon(id, Star)), tString)) should be === id
+        getTConID(TAp(TCon(id, Star), tString)) should be === id
     }
 
     it should "extract a TCon from the left hand side of a chain of TAps" in {
         val id = ModuleId("Test", "Test")
-        getTConID(TAp(TAp(TCon(Tycon(id, Star)), tString), tString)) should be === id
+        getTConID(TAp(TAp(TCon(id, Star), tString), tString)) should be === id
     }
 
     it should "throw an error when passed any other type" in {
-        evaluating { getTConID(TVar(Tyvar("a", Star))) } should produce [IllegalArgumentException]
-        evaluating { getTConID(TAp(TVar(Tyvar("a", Star)), tString)) } should produce [IllegalArgumentException]
+        evaluating { getTConID(TVar("a", Star)) } should produce [IllegalArgumentException]
+        evaluating { getTConID(TAp(TVar("a", Star), tString)) } should produce [IllegalArgumentException]
         evaluating { getTConID(TGen(0, 0)) } should produce [IllegalArgumentException]
         evaluating { getTConID(TAp(TGen(0, 0), tString)) } should produce [IllegalArgumentException]
         evaluating { getTConID(Forall(0, List.empty, tString)) } should produce [IllegalArgumentException]
@@ -46,14 +46,14 @@ class TypeTests extends FlatSpec {
     }
 
     it should "return false for other applied types" in {
-        isFuncType(TAp(TVar(Tyvar("a", Star)), tString)) should be (false)
+        isFuncType(TAp(TVar("a", Star), tString)) should be (false)
         isFuncType(TAp(TGen(0, 0), tString)) should be (false)
         isFuncType(TAp(Forall(0, List.empty, tList), tString)) should be (false)
     }
 
     it should "return false for any non-applied type" in {
         isFuncType(tArrow) should be (false)
-        isFuncType(TVar(Tyvar("a", Star))) should be (false)
+        isFuncType(TVar("a", Star)) should be (false)
         isFuncType(TGen(0, 0)) should be (false)
         isFuncType(Forall(0, List.empty, tList)) should be (false)
     }
@@ -119,14 +119,14 @@ class TypeTests extends FlatSpec {
     behavior of "quantify"
 
     it should "return the input when none of the provided type variables are in the type" in {
-        val a = TVar(Tyvar("a", Star))
+        val a = TVar("a", Star)
         quantify(List.empty, a fn a) should be === (a fn a)
     }
 
     it should "only quantify type variables in the provided list" in {
-        val a = TVar(Tyvar("a", Star))
-        val b = TVar(Tyvar("b", Star))
-        val sc = quantify(List(a.v), a fn (b fn a))
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        val sc = quantify(List(a), a fn (b fn a))
         val fi = lastForallId
         sc should be === Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0)))
     }
@@ -136,22 +136,22 @@ class TypeTests extends FlatSpec {
     behavior of "inst"
 
     it should "throw an error when the number of provided types does not match the number of TGens" in {
-        val a = TVar(Tyvar("a", Star))
+        val a = TVar("a", Star)
         val sc = Forall(0, List(Star), TGen(0, 0) fn (TGen(0, 1) fn TGen(0, 0)))
         evaluating { inst(sc, List.empty, sc) } should produce [IndexOutOfBoundsException]
         evaluating { inst(sc, List(a), sc) } should produce [IndexOutOfBoundsException]
     }
 
     it should "replace TGens in the specified Forall with the provided types" in {
-        val a = TVar(Tyvar("a", Star))
-        val b = TVar(Tyvar("b", Star))
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
         val sc = Forall(0, List(Star), TGen(0, 0) fn (a fn TGen(0, 0)))
         inst(sc, List(b), sc) should be === (b fn (a fn b))
     }
 
     it should "only replace TGens belonging to the specified Forall" in {
-        val a = TVar(Tyvar("a", Star))
-        val b = TVar(Tyvar("b", Star))
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
         val sc = Forall(0, List(Star), TGen(0, 0) fn Forall(1, List(Star), a fn TGen(1, 0)))
         inst(sc, List(b), sc) should be === (b fn Forall(1, List(Star), a fn TGen(1, 0)))
     }

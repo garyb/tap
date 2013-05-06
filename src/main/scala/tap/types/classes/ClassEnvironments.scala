@@ -3,7 +3,7 @@ package tap.types.classes
 import IsIn._
 import tap.ModuleId
 import tap.ast.FilePositional
-import tap.types.{TVar, Tyvar}
+import tap.types.TVar
 import tap.types.inference.{TIInternalError, TIError}
 import tap.util.PrettyPrint._
 import scala.Some
@@ -12,7 +12,7 @@ import tap.util.trace
 
 object ClassEnvironments {
 
-    type Class = (List[Tyvar], List[IsIn], List[Inst])
+    type Class = (List[TVar], List[IsIn], List[Inst])
     case class Inst(mId: String, ps: List[IsIn], tc: IsIn) extends FilePositional
     type ClassEnv = Map[ModuleId, Class]
 
@@ -68,7 +68,7 @@ object ClassEnvironments {
     /**
      * Extracts the type variable signature of the specified class.
      */
-    def sig(ce: ClassEnv, i: ModuleId): List[Tyvar] =
+    def sig(ce: ClassEnv, i: ModuleId): List[TVar] =
         ce.get(i) match {
             case Some((vs, ps, its)) => vs
             case None => throw TIInternalError("Cannot find variables for '" + i + "', class is missing from the current environment.")

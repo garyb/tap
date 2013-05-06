@@ -13,33 +13,33 @@ class KindTests extends FlatSpec {
 
     behavior of "kind"
 
-    it should "return a type variables's kind when given a Tyvar" in {
-        kind(Tyvar("a", Star)) should be === Star
-        kind(Tyvar("a", Kfun(Star, Star))) should be === Kfun(Star, Star)
+    it should "return a type variables's kind when given a TVar" in {
+        kind(TVar("a", Star)) should be === Star
+        kind(TVar("a", Kfun(Star, Star))) should be === Kfun(Star, Star)
     }
 
-    it should "return a type constructor's kind when given a Tycon" in {
-        kind(Tycon(ModuleId("Test", "A"), Star)) should be === Star
-        kind(Tycon(ModuleId("Test", "B"), Kfun(Star, Star))) should be === Kfun(Star, Star)
+    it should "return a type constructor's kind when given a TCon" in {
+        kind(TCon(ModuleId("Test", "A"), Star)) should be === Star
+        kind(TCon(ModuleId("Test", "B"), Kfun(Star, Star))) should be === Kfun(Star, Star)
     }
 
     it should "return a type's kind when given a TVar" in {
-        kind(TVar(Tyvar("a", Star))) should be === Star
-        kind(TVar(Tyvar("a", Kfun(Star, Star)))) should be === Kfun(Star, Star)
+        kind(TVar("a", Star)) should be === Star
+        kind(TVar("a", Kfun(Star, Star))) should be === Kfun(Star, Star)
     }
 
     it should "return a type's kind when given a TCon" in {
-        kind(TCon(Tycon(ModuleId("Test", "A"), Star))) should be === Star
-        kind(TCon(Tycon(ModuleId("Test", "B"), Kfun(Star, Star)))) should be === Kfun(Star, Star)
+        kind(TCon(ModuleId("Test", "A"), Star)) should be === Star
+        kind(TCon(ModuleId("Test", "B"), Kfun(Star, Star))) should be === Kfun(Star, Star)
     }
 
     it should "return a type's kind when given a Forall" in {
-        kind(Forall(0, List(Star), TCon(Tycon(ModuleId("Test", "A"), Star)))) should be === Star
-        kind(Forall(1, List(Star), TCon(Tycon(ModuleId("Test", "B"), Kfun(Star, Star))))) should be === Kfun(Star, Star)
+        kind(Forall(0, List(Star), TCon(ModuleId("Test", "A"), Star))) should be === Star
+        kind(Forall(1, List(Star), TCon(ModuleId("Test", "B"), Kfun(Star, Star)))) should be === Kfun(Star, Star)
     }
 
     it should "return a type's kind when given a TAp" in {
-        val tEither = TCon(Tycon(ModuleId("Test", "Either"), Kfun(Star, Kfun(Star, Star))))
+        val tEither = TCon(ModuleId("Test", "Either"), Kfun(Star, Kfun(Star, Star)))
         kind(TAp(tEither, tBool)) should be === Kfun(Star, Star)
         kind(TAp(TAp(tEither, tBool), tNumber)) should be === Star
     }

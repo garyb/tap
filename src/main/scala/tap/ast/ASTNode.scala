@@ -4,20 +4,19 @@ sealed trait ASTNode extends FilePositional
 
 // ---[ module structure ]---------------------------------------------------------------------------------------------
 
-case class ASTModule(name: String,
-                     exports: Set[Export],
-                     imports: Set[ASTImport],
-                     datatypes: List[ASTDataTypeDefinition],
-                     typeclasses: List[ASTTypeClassDefinition],
-                     instances: List[ASTTypeClassInstance],
-                     memberDefs: List[ASTDef],
-                     memberImpls: List[ASTLet]) extends ASTNode
+case class ASTModule(name: String, members: List[ASTModuleMember]) extends ASTNode
 
 // ---[ module-level ]-------------------------------------------------------------------------------------------------
 
 sealed trait ASTModuleMember extends ASTNode
-case class ASTImport(moduleName: String, defs: Option[Set[String]], prefix: Option[String]) extends ASTModuleMember
-case class ASTModuleExport(moduleName: String) extends ASTModuleMember
+case class ASTImport(module: String, defs: Option[Set[String]], prefix: Option[String]) extends ASTModuleMember
+
+sealed trait ASTExport extends ASTModuleMember
+case class ASTDataTypeExport(name: String, dcons: Set[String]) extends ASTExport
+case class ASTClassExport(name: String) extends ASTExport
+case class ASTMemberExport(name: String) extends ASTExport
+case class ASTModuleExport(name: String) extends ASTExport
+
 case class ASTDef(name: String, context: List[ASTTypeClassReference], ttype: ASTType) extends ASTModuleMember
 
 // ---[ expressions ]--------------------------------------------------------------------------------------------------

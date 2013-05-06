@@ -198,15 +198,7 @@ class ParserTests extends FlatSpec with ParserFixture {
 
     it should "parse module declarations" in {
         parseModule("(module Test)") should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set.empty,
-                    imports = Set.empty,
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = Nil,
-                    memberImpls = Nil)
+                ASTModule("Test", Nil)
     }
 
     it should "parse imports" in {
@@ -214,15 +206,8 @@ class ParserTests extends FlatSpec with ParserFixture {
             (module Test)
             (import Prelude)
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set.empty,
-                    imports = Set(ASTImport("Prelude", None, None)),
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = Nil,
-                    memberImpls = Nil)
+                ASTModule("Test", List(
+                    ASTImport("Prelude", None, None)))
     }
 
     it should "parse exports" in {
@@ -231,15 +216,8 @@ class ParserTests extends FlatSpec with ParserFixture {
             (module Test)
             (export (module Prelude))
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set(ExModule("Prelude")),
-                    imports = Set.empty,
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = Nil,
-                    memberImpls = Nil)
+                ASTModule("Test", List(
+                    ASTModuleExport("Prelude")))
     }
 
     it should "parse member definitions" in {
@@ -247,28 +225,14 @@ class ParserTests extends FlatSpec with ParserFixture {
             (module Test)
             (def identity (-> a a))
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set.empty,
-                    imports = Set.empty,
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = List(ASTDef("identity", Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))),
-                    memberImpls = Nil)
+                ASTModule("Test", List(
+                    ASTDef("identity", Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))))
         parseModule("""
             (module Test)
             (def print (=> (Show a) (-> a String)))
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set.empty,
-                    imports = Set.empty,
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = List(ASTDef("print", List(ASTTypeClassReference("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String"))))),
-                    memberImpls = Nil)
+                ASTModule("Test", List(
+                    ASTDef("print", List(ASTTypeClassReference("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String"))))))
     }
 
     it should "parse member implementations" in {
@@ -276,15 +240,8 @@ class ParserTests extends FlatSpec with ParserFixture {
             (module Test)
             (let x 0)
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set(ExMember("x")),
-                    imports = Set.empty,
-                    datatypes = Nil,
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = Nil,
-                    memberImpls = List(ASTLet("x", ASTNumber(0))))
+                ASTModule("Test", List(
+                    ASTLet("x", ASTNumber(0))))
     }
 
     it should "parse data type definitions" in {
@@ -294,26 +251,14 @@ class ParserTests extends FlatSpec with ParserFixture {
             (data Bool True False)
             (data (Maybe a) (Some a) None)
         """) should be ===
-                ASTModule(
-                    name = "Test",
-                    exports = Set(
-                        ExDataType("Unit", Set.empty),
-                        ExDataType("Bool", Set("True", "False")),
-                        ExDataType("Maybe", Set("Some", "None"))),
-                    imports = Set.empty,
-                    datatypes = List(
+                ASTModule("Test", List(
                         ASTDataTypeDefinition("Unit", Nil, Nil),
                         ASTDataTypeDefinition("Bool", Nil, List(
                             ASTDataTypeConstructor("True", Nil),
                             ASTDataTypeConstructor("False", Nil))),
                         ASTDataTypeDefinition("Maybe", List("a"), List(
                             ASTDataTypeConstructor("Some", List(ASTTypeVar("a"))),
-                            ASTDataTypeConstructor("None", Nil)))
-                    ),
-                    typeclasses = Nil,
-                    instances = Nil,
-                    memberDefs = Nil,
-                    memberImpls = Nil)
+                            ASTDataTypeConstructor("None", Nil)))))
     }
 
     ignore should "parse typeclass definitions" in {

@@ -29,8 +29,8 @@ object Natives {
 
     val types: Map[Id, Type] = Map(
 
-        `get!` -> Type.quantify(List(Tyvar("a", Star)), (TAp(TCon(Tycon(ModuleId("Prelude", "Var"), Kfun(Star, Star))), TVar(Tyvar("a", Star))) fn TVar(Tyvar("a", Star)))),
-        `set!` -> Type.quantify(List(Tyvar("a", Star)), (TAp(TCon(Tycon(ModuleId("Prelude", "Var"), Kfun(Star, Star))), TVar(Tyvar("a", Star))) fn (TVar(Tyvar("a", Star)) fn TVar(Tyvar("a", Star))))),
+        `get!` -> Type.quantify(List(TVar("a", Star)), TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
+        `set!` -> Type.quantify(List(TVar("a", Star)), TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TVar("a", Star))),
 
         `Num+Num` -> (tNumber fn (tNumber fn tNumber)),
         `String+String` -> (tString fn (tString fn tString)),

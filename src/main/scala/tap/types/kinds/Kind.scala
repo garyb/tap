@@ -12,21 +12,11 @@ case class Kvar(q: Id, id: String) extends Kind
 object Kind {
 
     /**
-     * Finds the kind of a type variable.
-     */
-    def kind(t: Tyvar) = t.k
-
-    /**
-     * Finds the kind of a type constant.
-     */
-    def kind(t: Tycon) = t.k
-
-    /**
      * Finds the kind of a type.
      */
     def kind(t: Type): Kind = t match {
-        case TVar(u) => kind(u)
-        case TCon(tc) => kind(tc)
+        case TVar(_, k) => k
+        case TCon(_, k) => k
         case Forall(_, _, t) => kind(t)
         case TAp(t, _) => kind(t) match {
             case Kfun(_, k) => k

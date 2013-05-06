@@ -1,6 +1,6 @@
 package tap.verifier
 
-import tap.types.Tyvar
+import tap.types.TVar
 import tap.types.kinds.Star
 import tap.util.PrettyPrint._
 import tap.util.trace
@@ -31,7 +31,7 @@ object VerifierTest {
                 trace("\n---------------------- Module [" + mname + "] ----------------------")
 
                 val mtcons = defs.tcons.filterKeys { msn => msn.mId == mname  }
-                if (mtcons.nonEmpty) trace("\nType constructors:\n" + (mtcons.map { case (ModuleId(_, tci), tc) => tci + " :: " + prettyPrint(tc.c.k) }.toList.sortBy({ x => x }) mkString "\n"))
+                if (mtcons.nonEmpty) trace("\nType constructors:\n" + (mtcons.map { case (ModuleId(_, tci), tc) => tci + " :: " + prettyPrint(tc.k) }.toList.sortBy({ x => x }) mkString "\n"))
 
                 val mdcons = defs.dcons.filterKeys { msn => msn.mId == mname  }
                 if (mdcons.nonEmpty) trace("\nData constructors:\n" + (mdcons.map { case (ModuleId(_, dci), dc) => dci + " :: " + prettyPrint(dc) }.toList.sortBy({ x => x }) mkString "\n"))
@@ -64,7 +64,7 @@ object VerifierTest {
         srcFiles ++ (dirs flatMap findSourceFiles)
     }
 
-    def printTypeclassKind(ps: List[Tyvar]): String =
+    def printTypeclassKind(ps: List[TVar]): String =
         ps.map { p => p.k }.map {
             case Star => "*"
             case k => "(" + prettyPrint(k) + ")"
