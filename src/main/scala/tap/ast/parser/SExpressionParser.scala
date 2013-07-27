@@ -90,47 +90,48 @@ object SExpressionParser extends RegexParsers {
 
     val dcon = sourced( typeIdent ^^ { case ident => ASTValueRead(ident) } )
     val instantiate = sourced( typeIdent ^^ { case ident => ASTValueRead(ident) }
-                                | "(" ~> dcon ~ (expr+) <~ ")"  ^^ { case dcon ~ exprs => ASTApply(dcon, exprs) }
-                                )
+                             | "(" ~> dcon ~ (expr+) <~ ")"  ^^ { case dcon ~ exprs => ASTApply(dcon, exprs) }
+                             )
 
     val value: Parser[ASTValue] = number | string | native | wildcard | ref
 
     //  [ data types ]  -----------------------------------------------------------------------------------------------
 
     val dataType = sourced( "(" ~> "data" ~> typeIdent ~ (typeConstructor*) <~ ")" ^^ { case ident ~ constructors => ASTDataTypeDefinition(ident, List.empty, constructors) }
-                             | "(" ~> "data" ~> "(" ~> typeIdent ~ (ident+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataTypeDefinition(ident, params, constructors) }
-                             )
+                          | "(" ~> "data" ~> "(" ~> typeIdent ~ (ident+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataTypeDefinition(ident, params, constructors) }
+                          )
 
     val typeConstructor = sourced( typeIdent ^^ { case ident => ASTDataTypeConstructor(ident, List.empty) }
-                                    | "(" ~> typeIdent ~ (typeRef+) <~ ")" ^^ { case ident ~ args => ASTDataTypeConstructor(ident, args) }
-                                    )
+                                 | "(" ~> typeIdent ~ (typeRef+) <~ ")" ^^ { case ident ~ args => ASTDataTypeConstructor(ident, args) }
+                                 )
 
     //  [ typeclasses ]  ----------------------------------------------------------------------------------------------
 
     val typeclass = sourced( "(" ~> "class" ~> classIdent ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTTypeClassDefinition(ident, List.empty, params, members)}
-                              | "(" ~> "class" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _  ~ params ~ _ ~ members => ASTTypeClassDefinition(ident, context, params, members)}
-                              )
+                           | "(" ~> "class" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _  ~ params ~ _ ~ members => ASTTypeClassDefinition(ident, context, params, members)}
+                           )
 
     val typeclassRef = sourced( "(" ~> classIdent ~ (paramIdent+) <~ ")" ^^ { case ident ~ params => ASTTypeClassReference(ident, params) } )
 
     val typeclassMember = sourced( "(" ~> "def" ~> ident ~ typeRef <~ ")" ^^ { case ident ~ ttype => ASTTypeClassMemberDefinition(ident, List.empty, ttype) }
-                                    | "(" ~> "def" ~> ident ~ "(" ~ "=>" ~ (typeclassRef+) ~ typeRef <~ ")" <~ ")" ^^ { case id ~ _ ~ _ ~ context ~ ttype => ASTTypeClassMemberDefinition(id, context, ttype) }
-                                    | typeclassMemberImplementation
-                                    )
+                                 | "(" ~> "def" ~> ident ~ "(" ~ "=>" ~ (typeclassRef+) ~ typeRef <~ ")" <~ ")" ^^ { case id ~ _ ~ _ ~ context ~ ttype => ASTTypeClassMemberDefinition(id, context, ttype) }
+                                 | typeclassMemberImplementation
+                                 )
 
     val typeclassMemberImplementation = sourced( "(" ~> "let" ~> ident ~ expr <~ ")" ^^ { case ident ~ expr => ASTTypeClassMemberImplementation(ident, expr) } )
 
     val instance = sourced( "(" ~> "instance" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _ ~ params ~ _ ~ members => ASTTypeClassInstance(ident, context, params, members) }
-                             | "(" ~> "instance" ~> classIdent ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTTypeClassInstance(ident, List.empty, params, members) }
-                             )
+                          | "(" ~> "instance" ~> classIdent ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTTypeClassInstance(ident, List.empty, params, members) }
+                          )
 
     //  [ references to types ]  --------------------------------------------------------------------------------------
 
     val tconRef = sourced( typeIdent ^^ { case ident => ASTTypeCon(ident) } )
     val tvarRef = sourced( paramIdent ^^ { case ident => ASTTypeVar(ident) } )
     val typeVarRef = sourced( paramIdent ^^ { case ident => ASTTypeVar(ident) } )
-    val funcTypeRef = sourced( ( "(" ~> "->" ~> (typeRef+) <~ ")" ^^ { case params => ASTFunctionType(params) }
-                                  | "->" ^^ { case _ => ASTTypeCon("->") } ))
+    val funcTypeRef = sourced( "(" ~> "->" ~> (typeRef+) <~ ")" ^^ { case params => ASTFunctionType(params) }
+                             | "->" ^^ { case _ => ASTTypeCon("->") }
+                             )
     val forallTypeRef = sourced( "(" ~> "forall" ~> "(" ~> (paramIdent+) ~ ")" ~ typeRef <~ ")" ^^ { case qvs ~ _ ~ t => ASTForall(qvs, t) } )
 
     val typeRef: Parser[ASTType] =
@@ -158,21 +159,22 @@ object SExpressionParser extends RegexParsers {
     val func = sourced( "(" ~> "lambda" ~> "(" ~> (ident*) ~ ")" ~ (expr+) <~ ")" ^^ {  case args ~ _ ~ body => ASTFunction(args, maybeBlock(body)) } )
 
     val op = sourced( "(" ~> "and" ~> expr ~ (expr+) <~ ")" ^^ { case term ~ terms => makeAnd(term :: terms) }
-                       | "(" ~> "or" ~> expr ~ (expr+) <~ ")" ^^ { case term ~ terms => makeOr(term :: terms) } )
+                    | "(" ~> "or" ~> expr ~ (expr+) <~ ")" ^^ { case term ~ terms => makeOr(term :: terms) }
+                    )
 
     val branch = sourced( "(" ~> "if" ~> ((expr ~ expr)+) ~ expr <~ ")" ^^ { case condBranches ~ branchElse => makeIf(condBranches, branchElse) } )
 
     val matchForm = sourced( "(" ~> "match" ~> expr ~ (matchCase+) <~ ")" ^^ { case expr ~ cases => ASTMatch(expr, cases) } )
     val matchCase = sourced( "(" ~> "case" ~> matchValue ~ expr <~ ")" ^^ { case value ~ expr => ASTCaseBranch(value, None, expr) }
-                              | "(" ~> "case-if" ~> matchValue ~ expr ~ expr <~ ")" ^^ { case value ~ guard ~ expr => ASTCaseBranch(value, Some(guard), expr) }
-                              )
+                           | "(" ~> "case-if" ~> matchValue ~ expr ~ expr <~ ")" ^^ { case value ~ guard ~ expr => ASTCaseBranch(value, Some(guard), expr) }
+                           )
 
     val matchValue: Parser[ASTPattern] = number | string | tupleDestructure | wildcard | ref | datatypeDestructure | matchCaseBind
     val matchCaseBind = sourced( "[" ~> ident ~ matchValue <~ "]" ^^ { case name ~ value => ASTBind(name, value) } )
     val tupleDestructure = sourced( "'" ~> "(" ~> (matchValue+) <~ ")" ^^ { case values => ASTUnapply("Tuple" + values.size, values) } )
     val datatypeDestructure = sourced( typeIdent ^^ { case ident => ASTUnapply(ident, List.empty) }
-                                        | "(" ~> typeIdent ~ (matchValue+) <~ ")"  ^^ { case ident ~ values => ASTUnapply(ident, values) }
-                                        )
+                                     | "(" ~> typeIdent ~ (matchValue+) <~ ")"  ^^ { case ident ~ values => ASTUnapply(ident, values) }
+                                     )
 
     val error = sourced( "(" ~> "error" ~> expr <~ ")" ^^ { case expr => ASTRaiseError(expr) } )
     val cast = sourced( "(" ~> "cast" ~> expr ~ typeRef <~ ")" ^^ { case expr ~ ttype => ASTCast(expr, ttype) } )
@@ -188,12 +190,18 @@ object SExpressionParser extends RegexParsers {
 
     val withPrefix = "(" ~> "with-prefix" ~> ident <~ ")"
     val moduleMemberImport = ident | typeIdent | classIdent
+
     val mimport = sourced( "(" ~> "import" ~> moduleIdent ~ (withPrefix?) <~ ")" ^^ { case ident ~ prefix => ASTImport(ident, None, prefix) }
-                         | "(" ~> "import" ~> "(" ~> moduleIdent ~ (moduleMemberImport+) ~ ")" ~ (withPrefix?) <~ ")" ^^ { case ident ~ defs ~ _ ~ prefix => ASTImport(ident, Some(defs.toSet), prefix) } )
+                         | "(" ~> "import" ~> "(" ~> moduleIdent ~ (moduleMemberImport+) ~ ")" ~ (withPrefix?) <~ ")" ^^ { case ident ~ defs ~ _ ~ prefix => ASTImport(ident, Some(defs.toSet), prefix) }
+                         )
 
-    val mexport = sourced( "(" ~> "export" ~> "(" ~> "module" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTModuleExport(ident) } )
+    val exports = sourced( "(" ~> "export" ~> "(" ~> "data" ~> typeIdent ~ "(" ~ (typeIdent*) <~ ")" <~ ")" <~ ")" ^^ { case tcon ~ _ ~ dcons => ASTDataTypeExport(tcon, dcons.toSet) }
+                         | "(" ~> "export" ~> "(" ~> "class" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTClassExport(ident) }
+                         | "(" ~> "export" ~> "(" ~> "module" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTModuleExport(ident) }
+                         | "(" ~> "export" ~> ident <~ ")" ^^ { case ident => ASTMemberExport(ident) }
+                         )
 
-    val moduleDefinition = mimport | mexport | define | dataType | typeclass | instance | declare
+    val moduleDefinition = mimport | exports | define | dataType | typeclass | instance | declare
 
     //  [ parser behaviour ]  -----------------------------------------------------------------------------------------
 

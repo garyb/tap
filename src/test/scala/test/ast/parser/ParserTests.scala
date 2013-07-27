@@ -190,6 +190,7 @@ class ParserTests extends FlatSpec with ParserFixture {
     }
 
     it should "parse universally quantified types" in {
+        parseType("(forall (a) a)") should be === ASTForall(List("a"), ASTTypeVar("a"))
         parseType("(forall (a) (-> a a))") should be === ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))
         parseType("(-> (forall (a) (-> a a)) String)") should be === ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String")))
     }
@@ -210,8 +211,36 @@ class ParserTests extends FlatSpec with ParserFixture {
                     ASTImport("Prelude", None, None)))
     }
 
-    it should "parse exports" in {
-        // TODO: all the other kinds of export
+    it should "parse data type exports" in {
+        parseModule("""
+            (module Test)
+            (export (data TCon1 (DCon1 DCon2)))
+            (export (data TCon2 ()))
+        """) should be ===
+                ASTModule("Test", List(
+                    ASTDataTypeExport("TCon1", Set("DCon1", "DCon2")),
+                    ASTDataTypeExport("TCon2", Set())))
+    }
+
+    it should "parse typeclass exports" in {
+        parseModule("""
+            (module Test)
+            (export (class SomeClass))
+        """) should be ===
+                ASTModule("Test", List(
+                    ASTClassExport("SomeClass")))
+    }
+
+    it should "parse member exports" in {
+        parseModule("""
+            (module Test)
+            (export x)
+        """) should be ===
+                ASTModule("Test", List(
+                    ASTMemberExport("x")))
+    }
+
+    it should "parse module exports" in {
         parseModule("""
             (module Test)
             (export (module Prelude))
