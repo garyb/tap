@@ -148,7 +148,7 @@ object ProgramVerifier {
                         members.foldLeft(defs.addClass(id, ModuleId(mId, id))) {
                             case (defs, m) => defs.addMember(m.name, ModuleId(mId, m.name))
                         }
-                    case (defs, ASTDef(id, _, _)) => defs.addMember(id, ModuleId(mId, id))
+                    case (defs, ASTDef(id, _)) => defs.addMember(id, ModuleId(mId, id))
                     case (defs, ASTLet(id, _)) => defs.addMember(id, ModuleId(mId, id))
                     case (defs, _) => defs
                 }

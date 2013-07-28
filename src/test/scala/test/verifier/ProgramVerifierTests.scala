@@ -133,10 +133,10 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
             "Test" -> ASTModule("Test", List(
                 ASTDataTypeDefinition("TestType", Nil, List(ASTDataTypeConstructor("TestType", Nil))),
                 ASTTypeClassDefinition("TestClass", Nil, Nil, List(
-                    ASTTypeClassMemberDefinition("TestClassMemberD", Nil, ASTTypeCon("Bool")),
+                    ASTTypeClassMemberDefinition("TestClassMemberD", ASTQType(Nil, ASTTypeCon("Bool"))),
                     ASTTypeClassMemberImplementation("TestClassMemberI", ASTValueRead("True")))),
                 ASTLet("TestMember1", ASTValueRead("True")),
-                ASTDef("TestMember2", Nil, ASTTypeCon("Bool")))))
+                ASTDef("TestMember2", ASTQType(Nil, ASTTypeCon("Bool"))))))
         findExportedDefinitions("Test", asts) should be ===
                 DefinitionsLookup(
                     Map("TestType" -> ModuleId("Test", "TestType")),

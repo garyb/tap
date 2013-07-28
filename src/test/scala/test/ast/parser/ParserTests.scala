@@ -255,13 +255,13 @@ class ParserTests extends FlatSpec with ParserFixture {
             (def identity (-> a a))
         """) should be ===
                 ASTModule("Test", List(
-                    ASTDef("identity", Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))))
+                    ASTDef("identity", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
         parseModule("""
             (module Test)
             (def print (=> (Show a) (-> a String)))
         """) should be ===
                 ASTModule("Test", List(
-                    ASTDef("print", List(ASTTypeClassReference("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String"))))))
+                    ASTDef("print", ASTQType(List(ASTTypeClassReference("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String")))))))
     }
 
     it should "parse member implementations" in {

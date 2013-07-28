@@ -169,7 +169,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // Extract types from members to use to generate kind constraints for the typeclass parameters
             val memberTypes = members.collect {
-                case ast @ ASTTypeClassMemberDefinition(name, _, ttype) =>
+                case ast @ ASTTypeClassMemberDefinition(name, ASTQType(_, ttype)) =>
                     val tvs = ASTUtil.findTypeVars(ttype)
                     if (!(tyvars forall { v => tvs contains v})) throw TypeclassIllegalMemberDefinition(id, name, ast)
                     ttype
@@ -190,7 +190,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // Extract names of members defined within the typeclass
             val memberNames = members.foldLeft(Set.empty[String]) {
-                case (result, ast @ ASTTypeClassMemberDefinition(memn, _, _)) =>
+                case (result, ast @ ASTTypeClassMemberDefinition(memn, _)) =>
                     if (result contains memn) throw TypeclassDuplicateMemberDefinitionError(id, memn, ast)
                     else result + memn
                 case (result, _) => result
@@ -260,7 +260,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def addMemberDefs(mdASTs: Seq[(ModuleName, ASTDef)], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, context, ttype))) =>
+        val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, ASTQType(context, ttype)))) =>
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
             val qt = getMemberType(qId, ttype, context, defs)
@@ -279,7 +279,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val pred = IsIn(msntc, tc.vs)
 
             members.foldLeft(result) {
-                case (result, ast @ ASTTypeClassMemberDefinition(id, context, ttype)) =>
+                case (result, ast @ ASTTypeClassMemberDefinition(id, ASTQType(context, ttype))) =>
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
                     val qt0 = getMemberType(qId, ttype, context, defs)

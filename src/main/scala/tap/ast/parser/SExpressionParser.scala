@@ -113,8 +113,7 @@ object SExpressionParser extends RegexParsers {
 
     val typeclassRef = sourced( "(" ~> classIdent ~ (paramIdent+) <~ ")" ^^ { case ident ~ params => ASTTypeClassReference(ident, params) } )
 
-    val typeclassMember = sourced( "(" ~> "def" ~> ident ~ typeRef <~ ")" ^^ { case ident ~ ttype => ASTTypeClassMemberDefinition(ident, List.empty, ttype) }
-                                 | "(" ~> "def" ~> ident ~ "(" ~ "=>" ~ (typeclassRef+) ~ typeRef <~ ")" <~ ")" ^^ { case id ~ _ ~ _ ~ context ~ ttype => ASTTypeClassMemberDefinition(id, context, ttype) }
+    val typeclassMember = sourced( "(" ~> "def" ~> ident ~ qualTypeRef <~ ")" ^^ { case ident ~ qtype => ASTTypeClassMemberDefinition(ident, qtype) }
                                  | typeclassMemberImplementation
                                  )
 
@@ -146,11 +145,13 @@ object SExpressionParser extends RegexParsers {
         | sourced( "[" ~> typeRef <~ "]" ^^ { case t => ASTTypeApply(ASTTypeCon("List"), List(t)) })
         )
 
+    val qualTypeRef = sourced( typeRef ^^ { case ttype => ASTQType(List.empty, ttype) }
+                             | "(" ~> "=>" ~> (typeclassRef+) ~ typeRef <~ ")" ^^ { case ctx ~ ttype => ASTQType(ctx, ttype) }
+                             )
+
     //  [ special forms ]  --------------------------------------------------------------------------------------------
 
-    val define = sourced( "(" ~> "def" ~> ident ~ typeRef <~ ")" ^^ { case id ~ ttype => ASTDef(id, List.empty, ttype) }
-                           | "(" ~> "def" ~> ident ~ "(" ~ "=>" ~ (typeclassRef+) ~ typeRef <~ ")" <~ ")" ^^ { case id ~ _ ~ _ ~ context ~ ttype => ASTDef(id, context, ttype) }
-                           )
+    val define = sourced( "(" ~> "def" ~> ident ~ qualTypeRef <~ ")" ^^ { case id ~ qtype => ASTDef(id, qtype) } )
 
     val declare = sourced( "(" ~> "let" ~> ident ~ expr <~ ")" ^^ { case id ~ term => ASTLet(id, term) } )
 

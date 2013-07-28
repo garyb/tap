@@ -17,7 +17,7 @@ case class ASTClassExport(name: String) extends ASTExport
 case class ASTMemberExport(name: String) extends ASTExport
 case class ASTModuleExport(name: String) extends ASTExport
 
-case class ASTDef(name: String, context: List[ASTTypeClassReference], ttype: ASTType) extends ASTModuleMember
+case class ASTDef(name: String, qtype: ASTQType) extends ASTModuleMember
 
 // ---[ expressions ]--------------------------------------------------------------------------------------------------
 
@@ -49,6 +49,8 @@ case object ASTNativeValue extends ASTValue
 
 // ---[ types ]--------------------------------------------------------------------------------------------------------
 
+case class ASTQType(context: List[ASTTypeClassReference], ttype: ASTType) extends ASTNode
+
 sealed abstract class ASTType extends ASTNode
 case class ASTTypeCon(name: String) extends ASTType
 case class ASTTypeVar(name: String) extends ASTType
@@ -71,7 +73,7 @@ case class ASTTypeClassDefinition(name: String,
                                   members: List[ASTTypeClassMember]) extends ASTModuleMember
 
 sealed abstract class ASTTypeClassMember extends ASTNode { def name: String }
-case class ASTTypeClassMemberDefinition(name: String, context: List[ASTTypeClassReference], ttype: ASTType) extends ASTTypeClassMember
+case class ASTTypeClassMemberDefinition(name: String, qtype: ASTQType) extends ASTTypeClassMember
 case class ASTTypeClassMemberImplementation(name: String, value: ASTExpr) extends ASTTypeClassMember
 
 case class ASTTypeClassInstance(tcName: String,
