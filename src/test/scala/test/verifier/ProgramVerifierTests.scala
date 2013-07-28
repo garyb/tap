@@ -131,10 +131,10 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
     it should "export ever item in the module if no explicit exports are defined" in {
         val asts = Map(
             "Test" -> ASTModule("Test", List(
-                ASTDataTypeDefinition("TestType", Nil, List(ASTDataTypeConstructor("TestType", Nil))),
-                ASTTypeClassDefinition("TestClass", Nil, Nil, List(
-                    ASTTypeClassMemberDefinition("TestClassMemberD", ASTQType(Nil, ASTTypeCon("Bool"))),
-                    ASTTypeClassMemberImplementation("TestClassMemberI", ASTValueRead("True")))),
+                ASTDataType("TestType", Nil, List(ASTDataCon("TestType", Nil))),
+                ASTClass("TestClass", Nil, Nil, List(
+                    ASTClassMemberDef("TestClassMemberD", ASTQType(Nil, ASTTypeCon("Bool"))),
+                    ASTClassMemberImpl("TestClassMemberI", ASTValueRead("True")))),
                 ASTLet("TestMember1", ASTValueRead("True")),
                 ASTDef("TestMember2", ASTQType(Nil, ASTTypeCon("Bool"))))))
         findExportedDefinitions("Test", asts) should be ===

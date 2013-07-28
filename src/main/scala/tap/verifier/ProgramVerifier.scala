@@ -101,9 +101,9 @@ object ProgramVerifier {
                 }
             }
 
-            val dtDefs = defs collect { case dtd: ASTDataTypeDefinition => dtd }
-            val tconDefs = (defs collect { case dtd: ASTDataTypeDefinition => dtd.constructors }).flatten
-            val tcDefs = defs collect { case tc: ASTTypeClassDefinition => tc }
+            val dtDefs = defs collect { case dtd: ASTDataType => dtd }
+            val tconDefs = (defs collect { case dtd: ASTDataType => dtd.constructors }).flatten
+            val tcDefs = defs collect { case tc: ASTClass => tc }
             val memberDefs = defs collect { case m: ASTDef => m }
             val memberImpls = defs collect { case m: ASTLet => m }
             val tcMemberDefs = tcDefs flatMap { tc => tc.members }
@@ -140,11 +140,11 @@ object ProgramVerifier {
             val exports =
                 if (explicitExports != DefinitionsLookup.empty) explicitExports
                 else asts(mId).members.foldLeft(DefinitionsLookup.empty) {
-                    case (defs, ASTDataTypeDefinition(id, _, dcons)) =>
+                    case (defs, ASTDataType(id, _, dcons)) =>
                         dcons.foldLeft(defs.addTCon(id, ModuleId(mId, id))) {
                             case (defs, dcon) => defs.addDCon(dcon.name, ModuleId(mId, dcon.name))
                         }
-                    case (defs, ASTTypeClassDefinition(id, _, _, members)) =>
+                    case (defs, ASTClass(id, _, _, members)) =>
                         members.foldLeft(defs.addClass(id, ModuleId(mId, id))) {
                             case (defs, m) => defs.addMember(m.name, ModuleId(mId, m.name))
                         }

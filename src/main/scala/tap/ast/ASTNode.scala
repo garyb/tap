@@ -49,7 +49,7 @@ case object ASTNativeValue extends ASTValue
 
 // ---[ types ]--------------------------------------------------------------------------------------------------------
 
-case class ASTQType(context: List[ASTTypeClassReference], ttype: ASTType) extends ASTNode
+case class ASTQType(context: List[ASTClassRef], ttype: ASTType) extends ASTNode
 
 sealed abstract class ASTType extends ASTNode
 case class ASTTypeCon(name: String) extends ASTType
@@ -60,23 +60,23 @@ case class ASTForall(scope: List[String], ttype: ASTType) extends ASTType
 
 // ---[ data types ]---------------------------------------------------------------------------------------------------
 
-case class ASTDataTypeDefinition(name: String, params: List[String], constructors: List[ASTDataTypeConstructor]) extends ASTModuleMember
-case class ASTDataTypeConstructor(name: String, args: List[ASTType]) extends ASTNode
+case class ASTDataType(name: String, params: List[String], constructors: List[ASTDataCon]) extends ASTModuleMember
+case class ASTDataCon(name: String, args: List[ASTType]) extends ASTNode
 
 // ---[ typeclasses ]--------------------------------------------------------------------------------------------------
 
-case class ASTTypeClassReference(name: String, params: List[String]) extends ASTNode
+case class ASTClassRef(name: String, params: List[String]) extends ASTNode
 
-case class ASTTypeClassDefinition(name: String,
-                                  context: List[ASTTypeClassReference],
+case class ASTClass(name: String,
+                                  context: List[ASTClassRef],
                                   params: List[String],
-                                  members: List[ASTTypeClassMember]) extends ASTModuleMember
+                                  members: List[ASTClassMember]) extends ASTModuleMember
 
-sealed abstract class ASTTypeClassMember extends ASTNode { def name: String }
-case class ASTTypeClassMemberDefinition(name: String, qtype: ASTQType) extends ASTTypeClassMember
-case class ASTTypeClassMemberImplementation(name: String, value: ASTExpr) extends ASTTypeClassMember
+sealed abstract class ASTClassMember extends ASTNode { def name: String }
+case class ASTClassMemberDef(name: String, qtype: ASTQType) extends ASTClassMember
+case class ASTClassMemberImpl(name: String, value: ASTExpr) extends ASTClassMember
 
-case class ASTTypeClassInstance(tcName: String,
-                                context: List[ASTTypeClassReference],
-                                params: List[ASTType],
-                                members: List[ASTTypeClassMemberImplementation]) extends ASTModuleMember
+case class ASTClassInst(tcName: String,
+                        context: List[ASTClassRef],
+                        params: List[ASTType],
+                        members: List[ASTClassMemberImpl]) extends ASTModuleMember

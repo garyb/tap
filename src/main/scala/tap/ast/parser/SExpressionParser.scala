@@ -97,30 +97,30 @@ object SExpressionParser extends RegexParsers {
 
     //  [ data types ]  -----------------------------------------------------------------------------------------------
 
-    val dataType = sourced( "(" ~> "data" ~> typeIdent ~ (typeConstructor*) <~ ")" ^^ { case ident ~ constructors => ASTDataTypeDefinition(ident, List.empty, constructors) }
-                          | "(" ~> "data" ~> "(" ~> typeIdent ~ (ident+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataTypeDefinition(ident, params, constructors) }
+    val dataType = sourced( "(" ~> "data" ~> typeIdent ~ (typeConstructor*) <~ ")" ^^ { case ident ~ constructors => ASTDataType(ident, List.empty, constructors) }
+                          | "(" ~> "data" ~> "(" ~> typeIdent ~ (ident+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataType(ident, params, constructors) }
                           )
 
-    val typeConstructor = sourced( typeIdent ^^ { case ident => ASTDataTypeConstructor(ident, List.empty) }
-                                 | "(" ~> typeIdent ~ (typeRef+) <~ ")" ^^ { case ident ~ args => ASTDataTypeConstructor(ident, args) }
+    val typeConstructor = sourced( typeIdent ^^ { case ident => ASTDataCon(ident, List.empty) }
+                                 | "(" ~> typeIdent ~ (typeRef+) <~ ")" ^^ { case ident ~ args => ASTDataCon(ident, args) }
                                  )
 
     //  [ typeclasses ]  ----------------------------------------------------------------------------------------------
 
-    val typeclass = sourced( "(" ~> "class" ~> classIdent ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTTypeClassDefinition(ident, List.empty, params, members)}
-                           | "(" ~> "class" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _  ~ params ~ _ ~ members => ASTTypeClassDefinition(ident, context, params, members)}
+    val typeclass = sourced( "(" ~> "class" ~> classIdent ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTClass(ident, List.empty, params, members)}
+                           | "(" ~> "class" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (paramIdent+) ~ ")" ~ (typeclassMember*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _  ~ params ~ _ ~ members => ASTClass(ident, context, params, members)}
                            )
 
-    val typeclassRef = sourced( "(" ~> classIdent ~ (paramIdent+) <~ ")" ^^ { case ident ~ params => ASTTypeClassReference(ident, params) } )
+    val typeclassRef = sourced( "(" ~> classIdent ~ (paramIdent+) <~ ")" ^^ { case ident ~ params => ASTClassRef(ident, params) } )
 
-    val typeclassMember = sourced( "(" ~> "def" ~> ident ~ qualTypeRef <~ ")" ^^ { case ident ~ qtype => ASTTypeClassMemberDefinition(ident, qtype) }
+    val typeclassMember = sourced( "(" ~> "def" ~> ident ~ qualTypeRef <~ ")" ^^ { case ident ~ qtype => ASTClassMemberDef(ident, qtype) }
                                  | typeclassMemberImplementation
                                  )
 
-    val typeclassMemberImplementation = sourced( "(" ~> "let" ~> ident ~ expr <~ ")" ^^ { case ident ~ expr => ASTTypeClassMemberImplementation(ident, expr) } )
+    val typeclassMemberImplementation = sourced( "(" ~> "let" ~> ident ~ expr <~ ")" ^^ { case ident ~ expr => ASTClassMemberImpl(ident, expr) } )
 
-    val instance = sourced( "(" ~> "instance" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _ ~ params ~ _ ~ members => ASTTypeClassInstance(ident, context, params, members) }
-                          | "(" ~> "instance" ~> classIdent ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTTypeClassInstance(ident, List.empty, params, members) }
+    val instance = sourced( "(" ~> "instance" ~> classIdent ~ "(" ~ "=>" ~ (typeclassRef+) ~ ")" ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ _ ~ context ~ _ ~ _ ~ params ~ _ ~ members => ASTClassInst(ident, context, params, members) }
+                          | "(" ~> "instance" ~> classIdent ~ "(" ~ (typeRef+) ~ ")" ~ (typeclassMemberImplementation*) <~ ")" ^^ { case ident ~ _ ~ params ~ _ ~ members => ASTClassInst(ident, List.empty, params, members) }
                           )
 
     //  [ references to types ]  --------------------------------------------------------------------------------------

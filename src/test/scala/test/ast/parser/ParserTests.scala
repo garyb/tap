@@ -261,7 +261,7 @@ class ParserTests extends FlatSpec with ParserFixture {
             (def print (=> (Show a) (-> a String)))
         """) should be ===
                 ASTModule("Test", List(
-                    ASTDef("print", ASTQType(List(ASTTypeClassReference("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String")))))))
+                    ASTDef("print", ASTQType(List(ASTClassRef("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String")))))))
     }
 
     it should "parse member implementations" in {
@@ -281,13 +281,13 @@ class ParserTests extends FlatSpec with ParserFixture {
             (data (Maybe a) (Some a) None)
         """) should be ===
                 ASTModule("Test", List(
-                        ASTDataTypeDefinition("Unit", Nil, Nil),
-                        ASTDataTypeDefinition("Bool", Nil, List(
-                            ASTDataTypeConstructor("True", Nil),
-                            ASTDataTypeConstructor("False", Nil))),
-                        ASTDataTypeDefinition("Maybe", List("a"), List(
-                            ASTDataTypeConstructor("Some", List(ASTTypeVar("a"))),
-                            ASTDataTypeConstructor("None", Nil)))))
+                        ASTDataType("Unit", Nil, Nil),
+                        ASTDataType("Bool", Nil, List(
+                            ASTDataCon("True", Nil),
+                            ASTDataCon("False", Nil))),
+                        ASTDataType("Maybe", List("a"), List(
+                            ASTDataCon("Some", List(ASTTypeVar("a"))),
+                            ASTDataCon("None", Nil)))))
     }
 
     it should "parse typeclass definitions" in {
@@ -299,10 +299,10 @@ class ParserTests extends FlatSpec with ParserFixture {
               (let compare (lambda (x y) EQ)))
             """) should be ===
                 ASTModule("Test", List(
-                    ASTTypeClassDefinition("Ord", List(ASTTypeClassReference("Eq", List("a"))), List("a"), List(
-                        ASTTypeClassMemberDefinition("nonsense", ASTQType(List(ASTTypeClassReference("Ord", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeCon("Bool"))))),
-                        ASTTypeClassMemberDefinition("compare", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"), ASTTypeCon("Ordering"))))),
-                        ASTTypeClassMemberImplementation("compare", ASTFunction(List("x", "y"), ASTValueRead("EQ")))
+                    ASTClass("Ord", List(ASTClassRef("Eq", List("a"))), List("a"), List(
+                        ASTClassMemberDef("nonsense", ASTQType(List(ASTClassRef("Ord", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeCon("Bool"))))),
+                        ASTClassMemberDef("compare", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"), ASTTypeCon("Ordering"))))),
+                        ASTClassMemberImpl("compare", ASTFunction(List("x", "y"), ASTValueRead("EQ")))
                     ))))
     }
 

@@ -25,9 +25,9 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
 
-        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataTypeDefinition => ModuleId(m.name, dtd.name) -> dtd } }.toMap
-        val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTTypeClassDefinition => ModuleId(m.name, tcd.name) -> tcd } }.toMap
-        val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTTypeClassInstance => m.name -> tci } }
+        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => ModuleId(m.name, dtd.name) -> dtd } }.toMap
+        val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => ModuleId(m.name, tcd.name) -> tcd } }.toMap
+        val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTClassInst => m.name -> tci } }
         val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
 
         var defs = verifiedDefs
@@ -40,10 +40,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs
     }
 
-    def addDataTypeDefs(dtASTs: Map[ModuleId, ASTDataTypeDefinition], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addDataTypeDefs(dtASTs: Map[ModuleId, ASTDataType], defs: ModuleDefinitions): ModuleDefinitions = {
 
         // Find the type constructor dependencies
-        val tconDeps = dtASTs map { case (id @ ModuleId(mId, _), ASTDataTypeDefinition(_, _, dcons)) =>
+        val tconDeps = dtASTs map { case (id @ ModuleId(mId, _), ASTDataType(_, _, dcons)) =>
             id -> (dcons flatMap { dcon =>
                 val tcons = ASTUtil.findAllTypeConstructors(scopes(mId).tcons, dcon.args)
                 // Exclude dependencies that have already been resolved
@@ -109,20 +109,20 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(tcons = tcons, dcons = dcons)
     }
 
-    def addTypeclassDefs(tcASTs: Map[ModuleId, ASTTypeClassDefinition], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassDefs(tcASTs: Map[ModuleId, ASTClass], defs: ModuleDefinitions): ModuleDefinitions = {
 
         // TODO: check all class tvs are reachable in the member arguments
         // tv reach test will also need refining when fundeps are in place, as then reach can be based on other
         // parameters as well as the simple presence check
 
-        tcASTs.values foreach { case ast @ ASTTypeClassDefinition(_, _, ps, _) =>
+        tcASTs.values foreach { case ast @ ASTClass(_, _, ps, _) =>
             if (ps.isEmpty) throw new VerifierMiscError("Typeclass has no type variables", ast)
         }
 
         // Build the list of dependencies each typeclass has (dependencies being superclasses - typeclasses referenced
         // in the context of the current typeclass definition)
-        val tcDeps = tcASTs.map { case (id, tcd @ ASTTypeClassDefinition(_, context, _, _)) =>
-            id -> context.map { case ASTTypeClassReference(name, _) =>
+        val tcDeps = tcASTs.map { case (id, tcd @ ASTClass(_, context, _, _)) =>
+            id -> context.map { case ASTClassRef(name, _) =>
                 scopes(id.mId).tcs.get(name) match {
                     case None => throw UnknownTypeclassError(name, tcd)
                     case Some(tcRef) => tcRef
@@ -145,10 +145,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // When ordering the typeclasses we discarded the AST nodes in favour of module-qualified identifiers,
             // so get the AST for the current definition
-            val ast @ ASTTypeClassDefinition(_, context, tyvars, members) = tcASTs(id)
+            val ast @ ASTClass(_, context, tyvars, members) = tcASTs(id)
 
             // Add kind inference constraints from superclasses
-            val kcs0 = context.foldLeft(List.empty[(Kind, Kind)]) { case (kcs, ast @ ASTTypeClassReference(supername, params)) =>
+            val kcs0 = context.foldLeft(List.empty[(Kind, Kind)]) { case (kcs, ast @ ASTClassRef(supername, params)) =>
 
                 // Check the params passed to superclasses are included in the typeclass parameters
                 params find { p => !(tyvars contains p) } match {
@@ -169,7 +169,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // Extract types from members to use to generate kind constraints for the typeclass parameters
             val memberTypes = members.collect {
-                case ast @ ASTTypeClassMemberDefinition(name, ASTQType(_, ttype)) =>
+                case ast @ ASTClassMemberDef(name, ASTQType(_, ttype)) =>
                     val tvs = ASTUtil.findTypeVars(ttype)
                     if (!(tyvars forall { v => tvs contains v})) throw TypeclassIllegalMemberDefinition(id, name, ast)
                     ttype
@@ -190,7 +190,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // Extract names of members defined within the typeclass
             val memberNames = members.foldLeft(Set.empty[String]) {
-                case (result, ast @ ASTTypeClassMemberDefinition(memn, _)) =>
+                case (result, ast @ ASTClassMemberDef(memn, _)) =>
                     if (result contains memn) throw TypeclassDuplicateMemberDefinitionError(id, memn, ast)
                     else result + memn
                 case (result, _) => result
@@ -198,7 +198,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // Extract names of members implemented within the typeclass
             val defaultMemberNames = members.foldLeft(Set.empty[String]) {
-                case (result, ast @ ASTTypeClassMemberImplementation(memn, _)) =>
+                case (result, ast @ ASTClassMemberImpl(memn, _)) =>
                     if (!(memberNames contains memn)) throw TypeclassImplementsUnknownMemberError(id, memn, ast)
                     if (result contains memn) throw TypeclassDuplicateMemberImplementationError(id, memn, ast)
                     else result + memn
@@ -211,9 +211,9 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(tcs = tcs)
     }
 
-    def addTypeclassInstances(instASTs: Seq[(ModuleName, ASTTypeClassInstance)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassInstances(instASTs: Seq[(ModuleName, ASTClassInst)], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        val tcis = instASTs.foldLeft(defs.tcis) { case (result, (mId, ast @ ASTTypeClassInstance(name, context, params, members))) =>
+        val tcis = instASTs.foldLeft(defs.tcis) { case (result, (mId, ast @ ASTClassInst(name, context, params, members))) =>
 
             // TODO: warn about orphaned instances. also decide what an orphan instance is in the multi parameter typeclass system.
 
@@ -241,7 +241,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val preds = getPredicates(tcIds, defs.tcs, context, tvs)
 
             val membersImplemented = members.foldLeft(Set.empty[String]) {
-                case (result, ast @ ASTTypeClassMemberImplementation(memn, _)) =>
+                case (result, ast @ ASTClassMemberImpl(memn, _)) =>
                     if (!(tc.members contains memn)) throw InstanceUnknownMemberError(tc, ps, memn, ast)
                     if (result contains memn) throw InstanceDuplicateMemberError(tc, ps, memn, ast)
                     else result + memn
@@ -270,16 +270,16 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(mts = mts)
     }
 
-    def addTypeclassMemberDefs(tcASTs: Map[ModuleId, ASTTypeClassDefinition], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassMemberDefs(tcASTs: Map[ModuleId, ASTClass], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        val mts = tcASTs.foldLeft(defs.mts) { case (result, (ModuleId(mId, tcName), ASTTypeClassDefinition(_, _, _, members))) =>
+        val mts = tcASTs.foldLeft(defs.mts) { case (result, (ModuleId(mId, tcName), ASTClass(_, _, _, members))) =>
 
             val msntc = scopes(mId).tcs(tcName)
             val tc = defs.tcs(msntc)
             val pred = IsIn(msntc, tc.vs)
 
             members.foldLeft(result) {
-                case (result, ast @ ASTTypeClassMemberDefinition(id, ASTQType(context, ttype))) =>
+                case (result, ast @ ASTClassMemberDef(id, ASTQType(context, ttype))) =>
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
                     val qt0 = getMemberType(qId, ttype, context, defs)
@@ -305,14 +305,14 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                 val id = ModuleId(mId, name)
                 id -> TapNode.fromAST(expr, rs, id, Natives.types)
             } ++
-            m.members.collect { case tc: ASTTypeClassDefinition =>
-                tc.members.collect { case ASTTypeClassMemberImplementation(name, tcm) =>
+            m.members.collect { case tc: ASTClass =>
+                tc.members.collect { case ASTClassMemberImpl(name, tcm) =>
                     val id = ModuleId(mId, name)
                     id -> TapNode.fromAST(tcm, rs, id, Natives.types)
                 }
             }.flatten ++
-            m.members.collect { case tci: ASTTypeClassInstance =>
-                tci.members.map { case ASTTypeClassMemberImplementation(name, tcim) =>
+            m.members.collect { case tci: ASTClassInst =>
+                tci.members.map { case ASTClassMemberImpl(name, tcim) =>
                     val id = InstId(m.name, ms.tcs(tci.tcName), tci.params map { p => ASTUtil.getTConName(ms.tcons, p) }, name)
                     id -> TapNode.fromAST(tcim, rs, id, Natives.types)
                 }
@@ -337,7 +337,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(mis = mis)
     }
 
-    def getMemberType(qId: ModuleId, ttype: ASTType, context: List[ASTTypeClassReference], defs: ModuleDefinitions): Qual[Type] = {
+    def getMemberType(qId: ModuleId, ttype: ASTType, context: List[ASTClassRef], defs: ModuleDefinitions): Qual[Type] = {
         val ms = scopes(qId.mId)
         val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
         val km = KInfer.solve(ki, ttype)
@@ -347,8 +347,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
     }
 
-    def getPredicates(lookup: Map[String, ModuleId], tcs: Map[ModuleId, TypeclassDef], context: List[ASTTypeClassReference], tvs: Map[String, TVar]): List[IsIn] =
-        context map { case ast @ ASTTypeClassReference(tcName, params) =>
+    def getPredicates(lookup: Map[String, ModuleId], tcs: Map[ModuleId, TypeclassDef], context: List[ASTClassRef], tvs: Map[String, TVar]): List[IsIn] =
+        context map { case ast @ ASTClassRef(tcName, params) =>
             val msntc = lookup(tcName)
             val ks = tcs(msntc).vs map kind
             val ps = (params zip ks) map { case (p, k) =>
