@@ -26,8 +26,5 @@ object FilesVerifier {
         val tci = new TypeclassInlining(defs, types, subst)
         tci()
         (ord, defs, types)
-
-        // TODO: quals in forall.
-        // TODO much later: GADTs lol
     }
 }

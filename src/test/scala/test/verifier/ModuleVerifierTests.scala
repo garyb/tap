@@ -391,16 +391,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     ignore should "throw an error if the instance does not implement all the members defined in the typeclass" in {}
     ignore should "produce typeclass instances" in {}
     ignore should "produce typeclass instances with members that make use of member-specific predicates" in {
-        /*
-        ; (class Ohno (a)
-        ; (def ohno (=> (Eq b) (-> a b String))))
 
-        ; (instance Ohno ((List a))
-        ; (let ohno (lambda (xs z)
-        ; ; TODO: typing fails with this present at the moment,
-        ; ; instance member type is missing the (Eq b) context from the tc def
-        ; ; (== z z)
-        ; "foo")))*/
     }
     ignore should "extend the tcis in the definitions list and leave all existing values unchanged" in {}
 

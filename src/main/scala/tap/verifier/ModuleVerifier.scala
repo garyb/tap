@@ -111,10 +111,6 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def addTypeclassDefs(tcASTs: Map[ModuleId, ASTClass], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        // TODO: check all class tvs are reachable in the member arguments
-        // tv reach test will also need refining when fundeps are in place, as then reach can be based on other
-        // parameters as well as the simple presence check
-
         tcASTs.values foreach { case ast @ ASTClass(_, _, ps, _) =>
             if (ps.isEmpty) throw new VerifierMiscError("Typeclass has no type variables", ast)
         }
@@ -215,8 +211,6 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
         val tcis = instASTs.foldLeft(defs.tcis) { case (result, (mId, ast @ ASTClassInst(name, context, params, members))) =>
 
-            // TODO: warn about orphaned instances. also decide what an orphan instance is in the multi parameter typeclass system.
-
             val tconLookup = scopes(mId).tcons
             val tcIds = scopes(mId).tcs
             val tcId = tcIds(name)
@@ -298,8 +292,6 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val mId = m.name
             val ms = scopes(mId)
             val rs = ResolveState(ms.dcons, ms.members, Set.empty, ms.tcons, defs.tcons)
-
-            // TODO: warn or error on incomplete matches
 
             val mis: Map[Id, TapExpr] = (m.members.collect { case ASTLet(name, expr) =>
                 val id = ModuleId(mId, name)

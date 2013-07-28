@@ -57,7 +57,6 @@ object DefinitionsLookup {
             mergeMap(mId, "type class", x.tcs, y.tcs),
             mergeMap(mId, "member", x.members, y.members)
         )
-        // TODO: ensure data constructors and members do not conflict. shouldn't be possible at the moment as members must start lowercase and data constructors must start uppercase.
     }
 
     def mergeMap(mId: String, defType: String, xs: Map[String, ModuleId], ys: Map[String, ModuleId]) = {

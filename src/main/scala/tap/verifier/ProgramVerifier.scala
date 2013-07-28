@@ -124,7 +124,6 @@ object ProgramVerifier {
     /**
      * Finds all the definitions exported from a module. If module A exports module B, the resulting list will contain
      * all the exported definitions from both A and B.
-     * TODO: what happens when a module is partially imported, but re-exported? should be disallowed?
      */
     def findExportedDefinitions(mId: String, asts: Modules): DefinitionsLookup = {
         def find(mId: String, seen: Set[String]): DefinitionsLookup = {
