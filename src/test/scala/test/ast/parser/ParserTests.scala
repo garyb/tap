@@ -290,8 +290,20 @@ class ParserTests extends FlatSpec with ParserFixture {
                             ASTDataTypeConstructor("None", Nil)))))
     }
 
-    ignore should "parse typeclass definitions" in {
-
+    it should "parse typeclass definitions" in {
+        parseModule("""
+            (module Test)
+            (class Ord (=> (Eq a)) (a)
+              (def nonsense (=> (Ord b) (-> a b Bool)))
+              (def compare (-> a a Ordering))
+              (let compare (lambda (x y) EQ)))
+            """) should be ===
+                ASTModule("Test", List(
+                    ASTTypeClassDefinition("Ord", List(ASTTypeClassReference("Eq", List("a"))), List("a"), List(
+                        ASTTypeClassMemberDefinition("nonsense", ASTQType(List(ASTTypeClassReference("Ord", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeCon("Bool"))))),
+                        ASTTypeClassMemberDefinition("compare", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"), ASTTypeCon("Ordering"))))),
+                        ASTTypeClassMemberImplementation("compare", ASTFunction(List("x", "y"), ASTValueRead("EQ")))
+                    ))))
     }
 
     ignore should "parse typeclass implementations" in {
