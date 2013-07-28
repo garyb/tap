@@ -297,7 +297,7 @@ class ParserTests extends FlatSpec with ParserFixture {
               (def nonsense (=> (Ord b) (-> a b Bool)))
               (def compare (-> a a Ordering))
               (let compare (lambda (x y) EQ)))
-            """) should be ===
+        """) should be ===
                 ASTModule("Test", List(
                     ASTClass("Ord", List(ASTClassRef("Eq", List("a"))), List("a"), List(
                         ASTClassMemberDef("nonsense", ASTQType(List(ASTClassRef("Ord", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeCon("Bool"))))),
@@ -306,7 +306,20 @@ class ParserTests extends FlatSpec with ParserFixture {
                     ))))
     }
 
-    ignore should "parse typeclass implementations" in {
-
+    it should "parse typeclass instances" in {
+        parseModule("""
+            (module Test)
+            (instance Eq (Unit)
+              (let == (lambda (x y) True)))
+            (instance Eq (=> (Eq a)) ((List a))
+              (let == (lambda (lx ly) False)))
+        """) should be ===
+                ASTModule("Test", List(
+                    ASTClassInst("Eq", Nil, List(ASTTypeCon("Unit")), List(
+                        ASTClassMemberImpl("==", ASTFunction(List("x", "y"), ASTValueRead("True")))
+                    )),
+                    ASTClassInst("Eq", List(ASTClassRef("Eq", List("a"))), List(ASTTypeApply(ASTTypeCon("List"), List(ASTTypeVar("a")))), List(
+                        ASTClassMemberImpl("==", ASTFunction(List("lx", "ly"), ASTValueRead("False")))
+                    ))))
     }
 }

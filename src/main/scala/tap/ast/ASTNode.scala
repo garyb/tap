@@ -68,9 +68,9 @@ case class ASTDataCon(name: String, args: List[ASTType]) extends ASTNode
 case class ASTClassRef(name: String, params: List[String]) extends ASTNode
 
 case class ASTClass(name: String,
-                                  context: List[ASTClassRef],
-                                  params: List[String],
-                                  members: List[ASTClassMember]) extends ASTModuleMember
+                    context: List[ASTClassRef],
+                    params: List[String],
+                    members: List[ASTClassMember]) extends ASTModuleMember
 
 sealed abstract class ASTClassMember extends ASTNode { def name: String }
 case class ASTClassMemberDef(name: String, qtype: ASTQType) extends ASTClassMember
