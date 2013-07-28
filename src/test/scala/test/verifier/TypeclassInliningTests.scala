@@ -3,8 +3,8 @@ package test.verifier
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 
-class ModuleTypeInferenceTests extends FlatSpec {
+class TypeclassInliningTests extends FlatSpec {
 
-    ignore should "have some tests" in {}
+    ignore should "also have some tests" in {}
 
 }
