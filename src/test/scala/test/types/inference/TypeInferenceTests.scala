@@ -5,9 +5,6 @@ import org.scalatest.matchers.ShouldMatchers._
 
 class TypeInferenceTests extends FlatSpec {
 
-    // TODO: check higher rank types are inferred correctly. need to modify behaviour of apply to push types down,
-    // see slpj paper on the matter.
-
     behavior of "freshInst for Type"
     ignore should "do some things" in {}
 

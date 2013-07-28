@@ -12,8 +12,6 @@ import test.TapNodeEquality
 
 class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
-    // TODO: tests to check file/position information is preserved by each transform
-
     val nullState = new ResolveState(Map.empty, Map.empty, Set.empty, Map.empty, Map.empty)
 
     // ------------------------------------------------------------------------

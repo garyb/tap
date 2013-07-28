@@ -300,8 +300,6 @@ object TypeInference {
     def tiProgram(ce: ClassEnv, as: Assumps, bgs: List[BindGroup]): (Assumps, Subst, ExprTypeMap) = {
         val (as1, ctx, ps) = tiSeq(tiBindGroup, ce, as, Context(nullSubst, Map.empty), bgs)
         val rs = reduce(ce, ps map { p => applySubst(ctx.s, p) })
-        // TODO: improve this so it is a TIError and specifies the expr that the missing instance occurred for
-        // TODO: check for members ambiguous types -> functions that return tvar that is not present in the predicates for the type
         rs foreach { r => if (!entail(ce, Nil, r)) throw TIInternalError("No instance exists for " + prettyPrint(r)) }
         (as1 mapValues { a => applySubst(ctx.s, a) }, ctx.s, ctx.ets)
     }
