@@ -42,6 +42,21 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def addDataTypeDefs(dtASTs: Map[ModuleId, ASTDataType], defs: ModuleDefinitions): ModuleDefinitions = {
 
+        // Check the data types do not conflict with imported definitions in the modules they belong to
+        dtASTs foreach { case (ModuleId(mId, _), dt) =>
+            val moduleScope = scopes(mId)
+            moduleScope.tcons.get(dt.name) match {
+                case Some(id) if id.mId != mId => throw NamespaceError("type constructor", dt.name, dt)
+                case _ =>
+            }
+            dt.constructors foreach { dcon =>
+                moduleScope.dcons.get(dcon.name) match {
+                    case Some(id) if id.mId != mId => throw NamespaceError("data constructor", dt.name, dt)
+                    case _ =>
+                }
+            }
+        }
+
         // Find the type constructor dependencies
         val tconDeps = dtASTs map { case (id @ ModuleId(mId, _), ASTDataType(_, _, dcons)) =>
             id -> (dcons flatMap { dcon =>
