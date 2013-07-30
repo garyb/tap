@@ -31,10 +31,6 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     behavior of "apply"
 
-    ignore should "throw an error if there are multiple data type definitions with the same name in a module" in {}
-    ignore should "throw an error if there are multiple typeclasses with the same name in a module" in {}
-    ignore should "throw an error if there are multiple member definitions with the same name in a module" in {}
-
     // ------------------------------------------------------------------------
 
     behavior of "addDataTypeDefs"
@@ -54,6 +50,9 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
         } should produce [NamespaceError]
     }
+
+    ignore should "throw an error if a type constructor is defined more than once in a module" in {}
+    ignore should "throw an error if a data constructor is defined more than once in a module" in {}
 
     it should "handle type constructors without type variables" in {
         val v = new ModuleVerifier(nullScopes)
@@ -175,6 +174,10 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             v.addTypeclassDefs(Map(ModuleId("Test", "A") -> tc), nullDefs)
         } should produce [VerifierMiscError]
     }
+
+    ignore should "throw an error if the name of typeclass conflicts with an imported definition" in {}
+
+    ignore should "throw an error if a typeclass is defined more than once in a module" in {}
 
     it should "produce typeclass definitions with single type parameters" in {
         val v = new ModuleVerifier(nullScopes)
@@ -390,14 +393,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     ignore should "throw an error if the instance implements members that were not defined in the typeclass" in {}
     ignore should "throw an error if the instance does not implement all the members defined in the typeclass" in {}
     ignore should "produce typeclass instances" in {}
-    ignore should "produce typeclass instances with members that make use of member-specific predicates" in {
-
-    }
+    ignore should "produce typeclass instances with members that make use of member-specific predicates" in {}
     ignore should "extend the tcis in the definitions list and leave all existing values unchanged" in {}
 
     // ------------------------------------------------------------------------
 
     behavior of "addMemberDefs"
+    ignore should "throw an error if the name of a member conflicts with an imported definition" in {}
     ignore should "throw an error if a member is defined more than once"
     ignore should "throw an error if a member name overlaps with a typeclass member name"
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
