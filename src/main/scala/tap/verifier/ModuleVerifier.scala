@@ -281,10 +281,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
         }
 
-        val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, ASTQType(context, ttype)))) =>
+        val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, qtype))) =>
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
-            val qt = getMemberType(qId, ttype, context, defs)
+            val qt = getMemberType(qId, qtype, defs)
             result + (qId -> Qual.quantify(Substitutions.tv(qt), qt))
         }
 
@@ -300,10 +300,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val pred = IsIn(msntc, tc.vs)
 
             members.foldLeft(result) {
-                case (result, ast @ ASTClassMemberDef(id, ASTQType(context, ttype))) =>
+                case (result, ast @ ASTClassMemberDef(id, qtype)) =>
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
-                    val qt0 = getMemberType(qId, ttype, context, defs)
+                    val qt0 = getMemberType(qId, qtype, defs)
                     val qt1 = Qual(pred :: qt0.ps, qt0.h)
                     result + (qId -> Qual.quantify(Substitutions.tv(qt1), qt1))
                 case (result, _) => result
@@ -362,7 +362,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             result + kv
         }
 
-    def getMemberType(qId: ModuleId, ttype: ASTType, context: List[ASTClassRef], defs: ModuleDefinitions): Qual[Type] = {
+    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions): Qual[Type] = {
+        val ASTQType(context, ttype) = qtype
         val ms = scopes(qId.mId)
         val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
         val km = KInfer.solve(ki, ttype)
