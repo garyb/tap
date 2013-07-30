@@ -26,7 +26,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
     def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
 
         val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => m.name -> dtd } }
-        val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => ModuleId(m.name, tcd.name) -> tcd } }.toMap
+        val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => m.name -> tcd } }
         val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTClassInst => m.name -> tci } }
         val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
 
@@ -132,15 +132,31 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(tcons = tcons, dcons = dcons)
     }
 
-    def addTypeclassDefs(tcASTs: Map[ModuleId, ASTClass], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassDefs(tcASTs: Seq[(ModuleName, ASTClass)], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        tcASTs.values foreach { case ast @ ASTClass(_, _, ps, _) =>
+        // Check typeclass definitions do not conflict with imported definitions in the modules they belong to
+        tcASTs foreach { case (mId, m) =>
+            scopes(mId).tcs.get(m.name) match {
+                case Some(id) if id.mId != mId => throw NamespaceError("typeclass", m.name, m)
+                case _ =>
+            }
+        }
+
+        // Construct a map that allows the classes to be looked up by module qualified name, also, ensure there are no
+        // duplicate definitions
+        val tcASTsLookup = tcASTs.foldLeft(Map.empty: Map[ModuleId, ASTClass]) { case (result, (mId, tc)) =>
+            val id = ModuleId(mId, tc.name)
+            if (result contains id) throw ModuleDuplicateDefinition(mId, "typeclass", tc.name, tc)
+            result + (id -> tc)
+        }
+
+        tcASTs foreach { case (mId, ast @ ASTClass(_, _, ps, _)) =>
             if (ps.isEmpty) throw new VerifierMiscError("Typeclass has no type variables", ast)
         }
 
         // Build the list of dependencies each typeclass has (dependencies being superclasses - typeclasses referenced
         // in the context of the current typeclass definition)
-        val tcDeps = tcASTs.map { case (id, tcd @ ASTClass(_, context, _, _)) =>
+        val tcDeps = tcASTsLookup.map { case (id, tcd @ ASTClass(_, context, _, _)) =>
             id -> context.map { case ASTClassRef(name, _) =>
                 scopes(id.mId).tcs.get(name) match {
                     case None => throw UnknownTypeclassError(name, tcd)
@@ -152,7 +168,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         // Sort typeclasses to ensure they resolve in the correct order. For example, Ord depends on Eq, so the result
         // of this sort will place Eq ahead of Ord in the list.
         val tcOrd = try {
-            Graph.tsort(tcDeps).filter { msn => tcASTs.contains(msn) }
+            Graph.tsort(tcDeps).filter { msn => tcASTsLookup.contains(msn) }
         } catch {
             case e: IllegalArgumentException => throw TypeclassRecursiveHeirarchyError(tcDeps.keys)
         }
@@ -164,7 +180,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             // When ordering the typeclasses we discarded the AST nodes in favour of module-qualified identifiers,
             // so get the AST for the current definition
-            val ast @ ASTClass(_, context, tyvars, members) = tcASTs(id)
+            val ast @ ASTClass(_, context, tyvars, members) = tcASTsLookup(id)
 
             // Add kind inference constraints from superclasses
             val kcs0 = context.foldLeft(List.empty[(Kind, Kind)]) { case (kcs, ast @ ASTClassRef(supername, params)) =>
@@ -295,9 +311,9 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(mts = mts)
     }
 
-    def addTypeclassMemberDefs(tcASTs: Map[ModuleId, ASTClass], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassMemberDefs(tcASTs: Seq[(ModuleName, ASTClass)], defs: ModuleDefinitions): ModuleDefinitions = {
 
-        val mts = tcASTs.foldLeft(defs.mts) { case (result, (ModuleId(mId, tcName), ASTClass(_, _, _, members))) =>
+        val mts = tcASTs.foldLeft(defs.mts) { case (result, (mId, ASTClass(tcName, _, _, members))) =>
 
             val msntc = scopes(mId).tcs(tcName)
             val tc = defs.tcs(msntc)
