@@ -25,7 +25,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
 
-        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => ModuleId(m.name, dtd.name) -> dtd } }
+        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => m.name -> dtd } }
         val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => ModuleId(m.name, tcd.name) -> tcd } }.toMap
         val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTClassInst => m.name -> tci } }
         val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
@@ -40,10 +40,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs
     }
 
-    def addDataTypeDefs(dtASTs: Seq[(ModuleId, ASTDataType)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addDataTypeDefs(dtASTs: Seq[(ModuleName, ASTDataType)], defs: ModuleDefinitions): ModuleDefinitions = {
 
         // Check the data types do not conflict with imported definitions in the modules they belong to
-        dtASTs foreach { case (ModuleId(mId, _), dt) =>
+        dtASTs foreach { case (mId, dt) =>
             val moduleScope = scopes(mId)
             moduleScope.tcons.get(dt.name) match {
                 case Some(id) if id.mId != mId => throw NamespaceError("type constructor", dt.name, dt)
@@ -57,7 +57,11 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
         }
 
-        val dtASTLookup = createDefsMap(dtASTs, "type constructor")
+        val dtASTLookup = dtASTs.foldLeft(Map.empty: Map[ModuleId, ASTDataType]) { case (result, (mId, dt)) =>
+            val id = ModuleId(mId, dt.name)
+            if (result contains id) throw ModuleDuplicateDefinition(mId, "type constructor", dt.name, dt)
+            result + (id -> dt)
+        }
 
         // Find the type constructor dependencies
         val tconDeps = dtASTLookup map { case (id @ ModuleId(mId, _), ASTDataType(_, _, dcons)) =>
@@ -355,12 +359,6 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
         defs.copy(mis = mis)
     }
-
-    def createDefsMap[V <: ASTNode](seq: Seq[(ModuleId, V)], defType: String): Map[ModuleId, V] =
-        seq.foldLeft(Map[ModuleId, V]()) { case (result, kv) =>
-            if (result contains kv._1) throw ModuleDuplicateDefinition(kv._1.mId, defType, kv._1.id, kv._2)
-            result + kv
-        }
 
     def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions): Qual[Type] = {
         val ASTQType(context, ttype) = qtype
