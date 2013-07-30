@@ -58,7 +58,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             v.addDataTypeDefs(Seq(
                 ModuleId("Test", "A") -> dtd,
                 ModuleId("Test", "A") -> dtd), nullDefs)
-        } should produce [DuplicateDefinitionError]
+        } should produce [ModuleDuplicateDefinition]
     }
 
     it should "throw an error if a data constructor is defined more than once in a module" in {
@@ -69,7 +69,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             v1.addDataTypeDefs(Seq(
                 ModuleId("Test", "A") -> ASTDataType("A", Nil, List(ASTDataCon("Aa", Nil), ASTDataCon("Aa", Nil)))
             ), nullDefs)
-        } should produce [DuplicateDefinitionError]
+        } should produce [ModuleDuplicateDefinition]
 
         Given("a duplicate dcon in different definitions")
         val v2 = new ModuleVerifier(nullScopes)
@@ -78,7 +78,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
                 ModuleId("Test", "A1") -> ASTDataType("A1", Nil, List(ASTDataCon("Aa", Nil))),
                 ModuleId("Test", "A2") -> ASTDataType("A2", Nil, List(ASTDataCon("Aa", Nil)))
             ), nullDefs)
-        } should produce [DuplicateDefinitionError]
+        } should produce [ModuleDuplicateDefinition]
     }
 
     it should "handle type constructors without type variables" in {
@@ -426,9 +426,29 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "addMemberDefs"
-    ignore should "throw an error if the name of a member conflicts with an imported definition" in {}
-    ignore should "throw an error if a member is defined more than once"
-    ignore should "throw an error if a member name overlaps with a typeclass member name"
+
+    it should "throw an error if the name of a member conflicts with an imported definition" in {
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty.addMember("fn", ModuleId("Prelude", "fn"))))
+        evaluating {
+            v.addMemberDefs(Seq(
+                "Test" -> ASTDef("fn", ASTQType(Nil, ASTTypeCon("Unit")))
+            ), nullDefs)
+        } should produce [NamespaceError]
+    }
+
+    it should "throw an error if a member is defined more than once" in {
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty.addTCon("Unit", ModuleId("Prelude", "Unit"))))
+        val defs = ModuleDefinitions(
+            Map(ModuleId("Prelude", "Unit") -> TCon(ModuleId("Prelude", "Unit"), Star)),
+            Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+        evaluating {
+            v.addMemberDefs(Seq(
+                "Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("Unit"))),
+                "Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("Unit")))), defs)
+        } should produce [ModuleDuplicateDefinition]
+    }
+
+    ignore should "throw an error if a member name overlaps with a typeclass member name" in {}
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
 
     // ------------------------------------------------------------------------

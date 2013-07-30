@@ -117,7 +117,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                         case as => as.map { a => ASTUtil.getType(scopes(id.mId).tcons, tcons1, dtenvs(id), a) }.foldRight(dts(id): Type) { (x, y) => x fn y }
                     }
                     val did = ModuleId(id.mId, dcon.name)
-                    if (dcons contains did) throw DuplicateDefinitionError("data constructor", dcon.name, dtd)
+                    if (dcons contains did) throw ModuleDuplicateDefinition(id.mId, "data constructor", dcon.name, dtd)
                     dcons + (did -> Type.quantify(Substitutions.tv(at), at))
                 }
             }
@@ -273,6 +273,14 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def addMemberDefs(mdASTs: Seq[(ModuleName, ASTDef)], defs: ModuleDefinitions): ModuleDefinitions = {
 
+        // Check the member definitions do not conflict with imported definitions in the modules they belong to
+        mdASTs foreach { case (mId, m) =>
+            scopes(mId).members.get(m.name) match {
+                case Some(id) if id.mId != mId => throw NamespaceError("member", m.name, m)
+                case _ =>
+            }
+        }
+
         val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, ASTQType(context, ttype)))) =>
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
@@ -350,7 +358,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def createDefsMap[V <: ASTNode](seq: Seq[(ModuleId, V)], defType: String): Map[ModuleId, V] =
         seq.foldLeft(Map[ModuleId, V]()) { case (result, kv) =>
-            if (result contains kv._1) throw DuplicateDefinitionError(defType, kv._1.id, kv._2)
+            if (result contains kv._1) throw ModuleDuplicateDefinition(kv._1.mId, defType, kv._1.id, kv._2)
             result + kv
         }
 
