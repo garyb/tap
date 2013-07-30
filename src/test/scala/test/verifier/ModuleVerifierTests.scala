@@ -39,7 +39,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map("A" -> ModuleId("Prelude", "A")), Map.empty, Map.empty, Map.empty)))
         val dtd = ASTDataType("A", Nil, Nil)
         evaluating {
-            v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+            v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         } should produce [NamespaceError]
     }
 
@@ -47,31 +47,58 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map.empty, Map("B" -> ModuleId("Prelude", "B")), Map.empty, Map.empty)))
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
         evaluating {
-            v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+            v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         } should produce [NamespaceError]
     }
 
-    ignore should "throw an error if a type constructor is defined more than once in a module" in {}
-    ignore should "throw an error if a data constructor is defined more than once in a module" in {}
+    it should "throw an error if a type constructor is defined more than once in a module" in {
+        val v = new ModuleVerifier(nullScopes)
+        val dtd = ASTDataType("A", Nil, Nil)
+        evaluating {
+            v.addDataTypeDefs(Seq(
+                ModuleId("Test", "A") -> dtd,
+                ModuleId("Test", "A") -> dtd), nullDefs)
+        } should produce [DuplicateDefinitionError]
+    }
+
+    it should "throw an error if a data constructor is defined more than once in a module" in {
+
+        Given("a duplicate dcon in the same definition")
+        val v1 = new ModuleVerifier(nullScopes)
+        evaluating {
+            v1.addDataTypeDefs(Seq(
+                ModuleId("Test", "A") -> ASTDataType("A", Nil, List(ASTDataCon("Aa", Nil), ASTDataCon("Aa", Nil)))
+            ), nullDefs)
+        } should produce [DuplicateDefinitionError]
+
+        Given("a duplicate dcon in different definitions")
+        val v2 = new ModuleVerifier(nullScopes)
+        evaluating {
+            v2.addDataTypeDefs(Seq(
+                ModuleId("Test", "A1") -> ASTDataType("A1", Nil, List(ASTDataCon("Aa", Nil))),
+                ModuleId("Test", "A2") -> ASTDataType("A2", Nil, List(ASTDataCon("Aa", Nil)))
+            ), nullDefs)
+        } should produce [DuplicateDefinitionError]
+    }
 
     it should "handle type constructors without type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, Nil)
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle type constructors with type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), Nil)
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))))
     }
 
     it should "handle data constructors with no arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         defs.dcons should be === Map(ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
     }
 
@@ -81,7 +108,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataType("A", Nil, Nil)
         val dtd2 = ASTDataType("B", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === Map(
@@ -95,7 +122,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataType("A", Nil, List(ASTDataCon("A", List(ASTTypeCon("B")))))
         val dtd2 = ASTDataType("B", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd1, ModuleId("Test", "B") -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === Map(
@@ -108,7 +135,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addTCon("A", ModuleId("Test", "A"))))
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === Map(
             ModuleId("Test", "B") -> (tA fn tA)
@@ -118,7 +145,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "handle data constructors with quantified type variable arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), List(ASTDataCon("B", List(ASTTypeVar("p"), ASTTypeVar("q")))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1))))
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
@@ -127,7 +154,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "infer the kind of type variables based upon their usage in data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), List(ASTDataCon("B", List(ASTTypeApply(ASTTypeVar("p"), List(ASTTypeVar("q")))))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Kfun(Star, Star), Star), TAp(TGen(fi, 0), TGen(fi, 1)) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1)))
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
@@ -136,13 +163,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "throw an error if the kind of type variables conflicts in the data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("E", List("a", "b"), List(ASTDataCon("X", List(ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))))), ASTDataCon("Y", List(ASTTypeApply(ASTTypeVar("b"), List(ASTTypeVar("a")))))))
-        evaluating { v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs) } should produce [KindConflictError]
+        evaluating { v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs) } should produce [KindConflictError]
     }
 
     it should "handle forall usage in data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", List(ASTForall(List("a"), ASTTypeVar("a"))))))
-        val defs = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), nullDefs)
+        val defs = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Star), TGen(fi, 0)) fn TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
@@ -151,7 +178,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "extend the tcons and dcons in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Map(ModuleId("Test", "A") -> dtd), testDefs)
+        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Seq(ModuleId("Test", "A") -> dtd), testDefs)
         dcons should be === testDefs.dcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
         tcons should be === testDefs.tcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
         tcs should be === testDefs.tcs

@@ -25,7 +25,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
 
-        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => ModuleId(m.name, dtd.name) -> dtd } }.toMap
+        val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => ModuleId(m.name, dtd.name) -> dtd } }
         val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => ModuleId(m.name, tcd.name) -> tcd } }.toMap
         val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTClassInst => m.name -> tci } }
         val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
@@ -40,7 +40,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs
     }
 
-    def addDataTypeDefs(dtASTs: Map[ModuleId, ASTDataType], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addDataTypeDefs(dtASTs: Seq[(ModuleId, ASTDataType)], defs: ModuleDefinitions): ModuleDefinitions = {
 
         // Check the data types do not conflict with imported definitions in the modules they belong to
         dtASTs foreach { case (ModuleId(mId, _), dt) =>
@@ -57,8 +57,10 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
         }
 
+        val dtASTLookup = createDefsMap(dtASTs, "type constructor")
+
         // Find the type constructor dependencies
-        val tconDeps = dtASTs map { case (id @ ModuleId(mId, _), ASTDataType(_, _, dcons)) =>
+        val tconDeps = dtASTLookup map { case (id @ ModuleId(mId, _), ASTDataType(_, _, dcons)) =>
             id -> (dcons flatMap { dcon =>
                 val tcons = ASTUtil.findAllTypeConstructors(scopes(mId).tcons, dcon.args)
                 // Exclude dependencies that have already been resolved
@@ -73,7 +75,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         val (tcons, dcons) = tconOrd.foldLeft((defs.tcons, defs.dcons)) { case ((tcons0, dcons0), currentDtdNames) =>
 
             // The ASTs for the current group of data type definitions
-            val currentDtds = currentDtdNames.zip (currentDtdNames map { msn => dtASTs(msn) }).toMap
+            val currentDtds = currentDtdNames.zip (currentDtdNames map { msn => dtASTLookup(msn) }).toMap
 
             // Infer kinds for each of the parameters in the type constructors, based on how the parameters are
             // used in each of the data constructors.
@@ -87,7 +89,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             // for each type constructor will produce when applied, and type environments containing just the
             // parameters for each type constructor
             val (tcons1, dts, dtenvs) = currentDtds.foldLeft((tcons0, Map.empty[ModuleId, Type], Map.empty[ModuleId, TypeVars])) {
-                case ((tcs, dtdts, penvs), (id, dtd)) =>
+                case ((tcons, dtdts, penvs), (id, dtd)) =>
 
                     // Find the kinds of the params used for the current type constructor
                     val pkinds = dtd.params.map { p => p -> KInfer(km, Kvar(id, p)) }.toMap
@@ -104,17 +106,19 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     // The type that the data constructors for this type constructor will produce
                     val t = dtd.params.foldLeft(tcon: Type) { (t, p) => TAp(t, penv(p)) }
 
-                    (tcs + (id -> tcon), dtdts + (id -> t), penvs + (id -> penv))
+                    (tcons + (id -> tcon), dtdts + (id -> t), penvs + (id -> penv))
             }
 
             // Create function types for the data constructors.
             val dcons1 = currentDtds.foldLeft(dcons0) { case (dcs, (id, dtd)) =>
-                dtd.constructors.foldLeft(dcs) { case (dcs, dcon) =>
+                dtd.constructors.foldLeft(dcs) { case (dcons, dcon) =>
                     val at = dcon.args match {
                         case Seq() => dts(id)
                         case as => as.map { a => ASTUtil.getType(scopes(id.mId).tcons, tcons1, dtenvs(id), a) }.foldRight(dts(id): Type) { (x, y) => x fn y }
                     }
-                    dcs + (ModuleId(id.mId, dcon.name) -> Type.quantify(Substitutions.tv(at), at))
+                    val did = ModuleId(id.mId, dcon.name)
+                    if (dcons contains did) throw DuplicateDefinitionError("data constructor", dcon.name, dtd)
+                    dcons + (did -> Type.quantify(Substitutions.tv(at), at))
                 }
             }
 
@@ -343,6 +347,12 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
         defs.copy(mis = mis)
     }
+
+    def createDefsMap[V <: ASTNode](seq: Seq[(ModuleId, V)], defType: String): Map[ModuleId, V] =
+        seq.foldLeft(Map[ModuleId, V]()) { case (result, kv) =>
+            if (result contains kv._1) throw DuplicateDefinitionError(defType, kv._1.id, kv._2)
+            result + kv
+        }
 
     def getMemberType(qId: ModuleId, ttype: ASTType, context: List[ASTClassRef], defs: ModuleDefinitions): Qual[Type] = {
         val ms = scopes(qId.mId)
