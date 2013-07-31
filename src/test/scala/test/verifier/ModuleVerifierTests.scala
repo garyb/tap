@@ -189,13 +189,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "extend the tcons and dcons in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Seq("Test" -> dtd), testDefs)
-        tcons should be === testDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
-        dcons should be === testDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
-        tcs should be === testDefs.tcs
-        tcis should be === testDefs.tcis
-        mts should be === testDefs.mts
-        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), testDefs)
+        defs.tcons should be === testDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
+        defs.dcons should be === testDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
+        defs.tcs should be === testDefs.tcs
+        defs.tcis should be === testDefs.tcis
+        defs.mts should be === testDefs.mts
+        (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
         }
@@ -420,13 +420,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "extend the tcs in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val tc = ASTClass("A", Nil, List("a"), Nil)
-        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addTypeclassDefs(Seq("Test" -> tc), testDefs)
-        tcons should be === testDefs.tcons
-        dcons should be === testDefs.dcons
-        tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty))
-        tcis should be === testDefs.tcis
-        mts should be === testDefs.mts
-        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+        val defs = v.addTypeclassDefs(Seq("Test" -> tc), testDefs)
+        defs.tcons should be === testDefs.tcons
+        defs.dcons should be === testDefs.dcons
+        defs.tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty))
+        defs.tcis should be === testDefs.tcis
+        defs.mts should be === testDefs.mts
+        (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
         }
@@ -536,22 +536,22 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     it should "extend the tcis in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
-        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addTypeclassInstances(Seq(
+        val defs = v.addTypeclassInstances(Seq(
             "Test" -> ASTClassInst("Y", List(ASTClassRef("Y", List("a"))), List(ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))), List(
                 ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
             ))
         ), testDefs)
-        tcons should be === testDefs.tcons
-        dcons should be === testDefs.dcons
-        tcs should be === testDefs.tcs
+        defs.tcons should be === testDefs.tcons
+        defs.dcons should be === testDefs.dcons
+        defs.tcs should be === testDefs.tcs
         val origTCIs = testDefs.tcis(ModuleId("Test", "Y"))
-        tcis should be === testDefs.tcis + (ModuleId("Test", "Y") ->
+        defs.tcis should be === testDefs.tcis + (ModuleId("Test", "Y") ->
                 (Inst("Test",
                     List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))),
                     IsIn(ModuleId("Test", "Y"), List(TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star)))))
                         :: origTCIs))
-        mts should be === testDefs.mts
-        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+        defs.mts should be === testDefs.mts
+        (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
         }
@@ -584,14 +584,13 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     it should "extend the mts in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
-        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) =
-            v.addMemberDefs(Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
-        tcons should be === testDefs.tcons
-        dcons should be === testDefs.dcons
-        tcs should be === testDefs.tcs
-        tcis should be === testDefs.tcis
-        mts should be === testDefs.mts + (ModuleId("Test", "A") -> Qual(Nil, testDefs.tcons(ModuleId("Test", "X"))))
-        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+        val defs = v.addMemberDefs(Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
+        defs.tcons should be === testDefs.tcons
+        defs.dcons should be === testDefs.dcons
+        defs.tcs should be === testDefs.tcs
+        defs.tcis should be === testDefs.tcis
+        defs.mts should be === testDefs.mts + (ModuleId("Test", "A") -> Qual(Nil, testDefs.tcons(ModuleId("Test", "X"))))
+        (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
         }
