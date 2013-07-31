@@ -18,6 +18,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     val nullDefs = ModuleDefinitions(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
     val nullScopes = Map("Test" -> DefinitionsLookup.empty)
+
     val testDefs =
         ModuleDefinitions(
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
@@ -26,6 +27,12 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
             Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star))),
             Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X"))))
+
+    val testScopes = Map("Test" -> DefinitionsLookup.empty
+            .addTCon("X", ModuleId("Test", "X"))
+            .addDCon("X", ModuleId("Test", "X"))
+            .addClass("Y", ModuleId("Test", "Y"))
+            .addMember("z", ModuleId("Test", "z")))
 
     // ------------------------------------------------------------------------
 
@@ -460,12 +467,25 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ModuleDuplicateDefinition]
     }
 
-    ignore should "throw an error if a member name overlaps with a typeclass member name" in {}
-    ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
+    it should "extend the mts in the definitions list and leave all existing values unchanged" in {
+        val v = new ModuleVerifier(testScopes)
+        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) =
+            v.addMemberDefs(Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
+        dcons should be === testDefs.dcons
+        tcons should be === testDefs.tcons
+        tcs should be === testDefs.tcs
+        tcis should be === testDefs.tcis
+        mts should be === testDefs.mts + (ModuleId("Test", "A") -> Qual(Nil, testDefs.tcons(ModuleId("Test", "X"))))
+        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+            k1 should be === k2
+            v1 should equal(v2)
+        }
+    }
 
     // ------------------------------------------------------------------------
 
     behavior of "addTypeclassMemberDefs"
+    ignore should "throw an error if a member name overlaps with a module member name" in {}
     ignore should "handle members with additional typeclass predicates" in {}
     ignore should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {}
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
