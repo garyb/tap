@@ -444,7 +444,15 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [UnknownTypeclassError]
     }
 
-    ignore should "throw an error if the typeclass is provided the wrong number of types" in {}
+    it should "throw an error if the typeclass is provided the wrong number of types" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.addTypeclassInstances(Seq(
+                "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X"), ASTTypeCon("X")), Nil)
+            ), testDefs)
+        } should produce [TypeclassArityError]
+    }
+
     ignore should "throw an error if the typeclass is provided types of the wrong kinds" in {}
     ignore should "throw an error if the typeclass is provided non-concrete types" in {}
     ignore should "throw an error if the instance provides a duplicate implementation for a member" in {}

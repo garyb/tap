@@ -261,6 +261,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                 case p @ ASTTypeApply(tc, _) if ASTUtil.isConcrete(tc) => ASTUtil.findTypeVars(p, Set.empty)
             }.flatten
 
+            if (params.length != tc.vs.length) throw TypeclassArityError(name, tc.vs.length, params.length, ast)
+
             val ps = (params zip tc.vs) map {
                 case (param: ASTTypeVar, _) => throw TypeclassIllegalParameterError("Typeclass parameters cannot be type variables " + (usedParams contains param.name), param)
                 case (param, tcp) =>
