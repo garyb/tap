@@ -13,6 +13,7 @@ import tap.types.classes.{Qual, IsIn, TypeclassDef}
 import tap.types.classes.ClassEnvironments.Inst
 import tap.ir.ValueReadExpr
 import language.reflectiveCalls
+import tap.util.trace
 
 class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
@@ -23,7 +24,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         ModuleDefinitions(
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
-            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, Nil, Set.empty, Set.empty)),
+            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set.empty, Set.empty)),
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
             Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star))),
             Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X"))))
@@ -500,15 +501,57 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     // ------------------------------------------------------------------------
 
-    behavior of "getMemberType"
-    ignore should "construct a qualified type from the AST for a type" in {}
+    behavior of "getPredicates"
+
+    it should "throw an error if a referenced type variable is out of scope" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.getPredicates(
+                testScopes("Test").tcs,
+                testDefs.tcs,
+                List(ASTClassRef("Y", List("a"))),
+                Map.empty)
+        } should produce [UnknownTypeVariableError]
+    }
+
+    it should "throw an error if there is an arity mismatch with the referenced class" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.getPredicates(
+                testScopes("Test").tcs,
+                testDefs.tcs,
+                List(ASTClassRef("Y", List("a", "b"))),
+                Map("a" -> TVar("a", Star)))
+        } should produce [TypeclassArityError]
+    }
+
+    it should "throw an error if there is a kind mismatch between type and typeclass reference" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.getPredicates(
+                testScopes("Test").tcs,
+                testDefs.tcs,
+                List(ASTClassRef("Y", List("a"))),
+                Map("a" -> TVar("a", Kfun(Star, Star))))
+        } should produce [KindMismatchError]
+    }
+
+    it should "construct a list of predicates from a list of AST typeclass references" in {
+        val v = new ModuleVerifier(testScopes)
+        v.getPredicates(
+            testScopes("Test").tcs,
+            testDefs.tcs,
+            List(ASTClassRef("Y", List("a")), ASTClassRef("Y", List("b"))),
+            Map("a" -> TVar("a", Star), "b" -> TVar("b", Star))) should be ===
+        List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star))),
+            IsIn(ModuleId("Test", "Y"), List(TVar("b", Star))))
+    }
 
     // ------------------------------------------------------------------------
 
-    behavior of "getPredicates"
-    ignore should "throw an error if a referenced type variable is out of scope" in {}
-    ignore should "throw an error if there is a kind mismatch between type and typeclass reference" in {}
-    ignore should "construct a list of predicates from a list of AST typeclass references" in {}
+    behavior of "getMemberType"
+    ignore should "throw an error if any of the qualified type variables are not reachable in the type" in {}
+    ignore should "construct a qualified type from the AST for a type" in {}
 
     // ------------------------------------------------------------------------
 

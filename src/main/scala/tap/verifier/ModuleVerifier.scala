@@ -376,21 +376,11 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(mis = mis)
     }
 
-    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions): Qual[Type] = {
-        val ASTQType(context, ttype) = qtype
-        val ms = scopes(qId.mId)
-        val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
-        val km = KInfer.solve(ki, ttype)
-        val tvNames = ASTUtil.findTypeVars(ttype, Set.empty)
-        val tvs = (tvNames map { p => p -> TVar(p, KInfer(km, Kvar(qId, p))) }).toMap
-        val ps1 = getPredicates(ms.tcs, defs.tcs, context, tvs)
-        Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
-    }
-
     def getPredicates(lookup: Map[String, ModuleId], tcs: Map[ModuleId, TypeclassDef], context: List[ASTClassRef], tvs: Map[String, TVar]): List[IsIn] =
         context map { case ast @ ASTClassRef(tcName, params) =>
             val msntc = lookup(tcName)
             val ks = tcs(msntc).vs map kind
+            if (ks.length != params.length) throw TypeclassArityError(tcName, ks.length, params.length, ast)
             val ps = (params zip ks) map { case (p, k) =>
                 tvs.get(p) match {
                     case None => throw UnknownTypeVariableError(p, ast)
@@ -401,6 +391,17 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
             IsIn(msntc, ps)
         }
+
+    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions): Qual[Type] = {
+        val ASTQType(context, ttype) = qtype
+        val ms = scopes(qId.mId)
+        val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
+        val km = KInfer.solve(ki, ttype)
+        val tvNames = ASTUtil.findTypeVars(ttype, Set.empty)
+        val tvs = (tvNames map { p => p -> TVar(p, KInfer(km, Kvar(qId, p))) }).toMap
+        val ps1 = getPredicates(ms.tcs, defs.tcs, context, tvs)
+        Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
+    }
 
     def lookupInstanceType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
 
