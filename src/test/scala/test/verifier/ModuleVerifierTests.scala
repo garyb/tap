@@ -533,7 +533,29 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     }
 
     ignore should "produce typeclass instances with members that make use of member-specific predicates" in {}
-    ignore should "extend the tcis in the definitions list and leave all existing values unchanged" in {}
+
+    it should "extend the tcis in the definitions list and leave all existing values unchanged" in {
+        val v = new ModuleVerifier(testScopes)
+        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addTypeclassInstances(Seq(
+            "Test" -> ASTClassInst("Y", List(ASTClassRef("Y", List("a"))), List(ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))), List(
+                ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
+            ))
+        ), testDefs)
+        tcons should be === testDefs.tcons
+        dcons should be === testDefs.dcons
+        tcs should be === testDefs.tcs
+        val origTCIs = testDefs.tcis(ModuleId("Test", "Y"))
+        tcis should be === testDefs.tcis + (ModuleId("Test", "Y") ->
+                (Inst("Test",
+                    List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))),
+                    IsIn(ModuleId("Test", "Y"), List(TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star)))))
+                        :: origTCIs))
+        mts should be === testDefs.mts
+        (mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
+            k1 should be === k2
+            v1 should equal(v2)
+        }
+    }
 
     // ------------------------------------------------------------------------
 
