@@ -56,11 +56,13 @@ object KInfer {
 
             case ASTTypeVar(id) => (Kvar(current, id), List.empty)
 
-            case ASTTypeCon(id) => tcs.get(lookup(id)) match {
-                case Some(tc) => (kind(tc), List.empty)
-                case None if allCurrent contains lookup(id) => (newKVar(current), List.empty)
-                case None => throw UnknownTypeConstructorError(id, t)
-            }
+            case ASTTypeCon(id) =>
+                val msn = lookup.getOrElse(id, throw UnknownTypeConstructorError(id, t))
+                tcs.get(msn) match {
+                    case Some(tc) => (kind(tc), List.empty)
+                    case None if allCurrent contains msn => (newKVar(current), List.empty)
+                    case None => throw UnknownTypeConstructorError(id, t)
+                }
 
             case ASTTypeApply(f, ps) =>
                 val (fk, eq1) = assume(f)

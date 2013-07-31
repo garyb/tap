@@ -550,8 +550,35 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "getMemberType"
-    ignore should "throw an error if any of the qualified type variables are not reachable in the type" in {}
-    ignore should "construct a qualified type from the AST for a type" in {}
+
+    it should "throw an error if any of the referenced types are not in scope" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.getMemberType(
+                ModuleId("Test", "a"),
+                ASTQType(Nil, ASTTypeCon("Nonexist")),
+                testDefs)
+        } should produce [UnknownTypeConstructorError]
+    }
+
+    it should "throw an error if any of the qualified type variables are not reachable in the type" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.getMemberType(
+                ModuleId("Test", "a"),
+                ASTQType(List(ASTClassRef("Y", List("a"))), ASTTypeCon("X")),
+                testDefs)
+        } should produce [UnknownTypeVariableError]
+    }
+
+    it should "construct a qualified type from the AST for a type" in {
+        val v = new ModuleVerifier(testScopes)
+        v.getMemberType(
+            ModuleId("Test", "a"),
+            ASTQType(Nil, ASTTypeCon("X")),
+            testDefs) should be ===
+        Qual(Nil, TCon(ModuleId("Test", "X"), Star))
+    }
 
     // ------------------------------------------------------------------------
 
