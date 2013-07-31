@@ -25,9 +25,10 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star),
                 ModuleId("Test", "X1") -> TCon(ModuleId("Test", "X1"), Kfun(Star, Star))),
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
-            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set.empty, Set.empty)),
+            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty)),
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
-            Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star))),
+            Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star)),
+                ModuleId("Test", "yfn") -> Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TVar("a", Star) fn TVar("a", Star))),
             Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X"))))
 
     val testScopes = Map("Test" -> DefinitionsLookup.empty
@@ -471,7 +472,18 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [TypeclassIllegalParameterError]
     }
 
-    ignore should "throw an error if the instance provides a duplicate implementation for a member" in {}
+    it should "throw an error if the instance provides a duplicate implementation for a member" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.addTypeclassInstances(Seq(
+                "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
+                    ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x"))),
+                    ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
+                ))
+            ), testDefs)
+        } should produce [InstanceDuplicateMemberError]
+    }
+
     ignore should "throw an error if the instance implements members that were not defined in the typeclass" in {}
     ignore should "throw an error if the instance does not implement all the members defined in the typeclass" in {}
     ignore should "produce typeclass instances" in {}
