@@ -505,7 +505,33 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [InstanceIncompleteError]
     }
 
-    ignore should "produce typeclass instances" in {}
+    it should "produce typeclass instances" in {
+        val v = new ModuleVerifier(testScopes)
+        val defs = v.addTypeclassInstances(Seq(
+            "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
+                ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
+            ))
+        ), testDefs)
+        val origTCIs = testDefs.tcis(ModuleId("Test", "Y"))
+        defs.tcis should be === testDefs.tcis + (ModuleId("Test", "Y") ->
+                (Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(testDefs.tcons(ModuleId("Test", "X"))))) :: origTCIs))
+    }
+
+    it should "produce typeclass instances defined with extended context" in {
+        val v = new ModuleVerifier(testScopes)
+        val defs = v.addTypeclassInstances(Seq(
+            "Test" -> ASTClassInst("Y", List(ASTClassRef("Y", List("a"))), List(ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))), List(
+                ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
+            ))
+        ), testDefs)
+        val origTCIs = testDefs.tcis(ModuleId("Test", "Y"))
+        defs.tcis should be === testDefs.tcis + (ModuleId("Test", "Y") ->
+                (Inst("Test",
+                    List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))),
+                    IsIn(ModuleId("Test", "Y"), List(TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star)))))
+                        :: origTCIs))
+    }
+
     ignore should "produce typeclass instances with members that make use of member-specific predicates" in {}
     ignore should "extend the tcis in the definitions list and leave all existing values unchanged" in {}
 
