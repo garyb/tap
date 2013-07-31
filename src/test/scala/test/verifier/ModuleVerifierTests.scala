@@ -22,7 +22,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     val testDefs =
         ModuleDefinitions(
-            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
+            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star),
+                ModuleId("Test", "X1") -> TCon(ModuleId("Test", "X1"), Kfun(Star, Star))),
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
             Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set.empty, Set.empty)),
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
@@ -31,6 +32,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     val testScopes = Map("Test" -> DefinitionsLookup.empty
             .addTCon("X", ModuleId("Test", "X"))
+            .addTCon("X1", ModuleId("Test", "X1"))
             .addDCon("X", ModuleId("Test", "X"))
             .addClass("Y", ModuleId("Test", "Y"))
             .addMember("z", ModuleId("Test", "z")))
@@ -186,9 +188,9 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "extend the tcons and dcons in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Seq("Test" -> dtd), testDefs)
-        dcons should be === testDefs.dcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
-        tcons should be === testDefs.tcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
+        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addDataTypeDefs(Seq("Test" -> dtd), testDefs)
+        tcons should be === testDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
+        dcons should be === testDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
         tcs should be === testDefs.tcs
         tcis should be === testDefs.tcis
         mts should be === testDefs.mts
@@ -417,9 +419,9 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     it should "extend the tcs in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val tc = ASTClass("A", Nil, List("a"), Nil)
-        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) = v.addTypeclassDefs(Seq("Test" -> tc), testDefs)
-        dcons should be === testDefs.dcons
+        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) = v.addTypeclassDefs(Seq("Test" -> tc), testDefs)
         tcons should be === testDefs.tcons
+        dcons should be === testDefs.dcons
         tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty))
         tcis should be === testDefs.tcis
         mts should be === testDefs.mts
@@ -470,10 +472,10 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     it should "extend the mts in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
-        val ModuleDefinitions(dcons, tcons, tcs, tcis, mts, mis) =
+        val ModuleDefinitions(tcons, dcons, tcs, tcis, mts, mis) =
             v.addMemberDefs(Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
-        dcons should be === testDefs.dcons
         tcons should be === testDefs.tcons
+        dcons should be === testDefs.dcons
         tcs should be === testDefs.tcs
         tcis should be === testDefs.tcis
         mts should be === testDefs.mts + (ModuleId("Test", "A") -> Qual(Nil, testDefs.tcons(ModuleId("Test", "X"))))
@@ -582,8 +584,34 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
     // ------------------------------------------------------------------------
 
-    behavior of "lookupInstanceType"
-    ignore should "throw an error if the type has too many parameters applied" in {}
-    ignore should "throw an error if the type has no parameters applied" in {}
-    ignore should "construct a type for a typeclass instance parameter" in {}
+    behavior of "lookupInstanceParamType"
+
+    it should "throw an error if the type has parameters applied but does not accept parameters" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.lookupInstanceParamType(
+                testScopes("Test").tcons,
+                testDefs.tcons,
+                ASTTypeApply(ASTTypeCon("X"), List(ASTTypeVar("a"))))
+        } should produce [TypeConstructorNoArgsError]
+    }
+
+    it should "throw an error if the type has too many parameters applied" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.lookupInstanceParamType(
+                testScopes("Test").tcons,
+                testDefs.tcons,
+                ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a"), ASTTypeVar("b"))))
+        } should produce [TypeConstructorTooManyArgsError]
+    }
+
+    it should "construct a type for a typeclass instance parameter" in {
+        val v = new ModuleVerifier(testScopes)
+        v.lookupInstanceParamType(
+            testScopes("Test").tcons,
+            testDefs.tcons,
+            ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))) should be ===
+        TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star))
+    }
 }

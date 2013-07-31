@@ -264,7 +264,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val ps = (params zip tc.vs) map {
                 case (param: ASTTypeVar, _) => throw TypeclassIllegalParameterError("Typeclass parameters cannot be type variables " + (usedParams contains param.name), param)
                 case (param, tcp) =>
-                    val t = lookupInstanceType(tconLookup, defs.tcons, param)
+                    val t = lookupInstanceParamType(tconLookup, defs.tcons, param)
                     if (kind(tcp) != kind(t)) throw TypeclassIllegalParameterError("Type parameter kind is wrong: '" + kind(t) + "' should be '" + kind(tcp) + "' " + prettyPrint(t), param)
                     t
             }
@@ -403,7 +403,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
     }
 
-    def lookupInstanceType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
+    def lookupInstanceParamType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
 
         case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t)
 
