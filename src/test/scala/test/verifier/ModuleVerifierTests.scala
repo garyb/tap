@@ -484,8 +484,27 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [InstanceDuplicateMemberError]
     }
 
-    ignore should "throw an error if the instance implements members that were not defined in the typeclass" in {}
-    ignore should "throw an error if the instance does not implement all the members defined in the typeclass" in {}
+    it should "throw an error if the instance implements members that were not defined in the typeclass" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.addTypeclassInstances(Seq(
+                "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
+                    ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x"))),
+                    ASTClassMemberImpl("hwaet", ASTFunction(List("x"), ASTValueRead("x")))
+                ))
+            ), testDefs)
+        } should produce [InstanceUnknownMemberError]
+    }
+
+    it should "throw an error if the instance does not implement all the members defined in the typeclass" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.addTypeclassInstances(Seq(
+                "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), Nil)
+            ), testDefs)
+        } should produce [InstanceIncompleteError]
+    }
+
     ignore should "produce typeclass instances" in {}
     ignore should "produce typeclass instances with members that make use of member-specific predicates" in {}
     ignore should "extend the tcis in the definitions list and leave all existing values unchanged" in {}
