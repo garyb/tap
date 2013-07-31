@@ -434,7 +434,16 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "addTypeclassInstances"
-    ignore should "throw an error if the typeclass is not in scope" in {}
+
+    it should "throw an error if the typeclass is not in scope" in {
+        val v = new ModuleVerifier(testScopes)
+        evaluating {
+            v.addTypeclassInstances(Seq(
+                "Test" -> ASTClassInst("Foof", Nil, List(ASTTypeCon("X")), Nil)
+            ), testDefs)
+        } should produce [UnknownTypeclassError]
+    }
+
     ignore should "throw an error if the typeclass is provided the wrong number of types" in {}
     ignore should "throw an error if the typeclass is provided types of the wrong kinds" in {}
     ignore should "throw an error if the typeclass is provided non-concrete types" in {}

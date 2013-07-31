@@ -252,8 +252,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             val tconLookup = scopes(mId).tcons
             val tcIds = scopes(mId).tcs
-            val tcId = tcIds(name)
-            val tc = defs.tcs(tcId)
+            val tcId = tcIds.getOrElse(name, throw new UnknownTypeclassError(name, ast))
+            val tc = defs.tcs.getOrElse(tcId, throw new UnknownTypeclassError(name, ast))
 
             // TODO: get all type variables used in concrete applied types
             // TODO: check kinds of type variables used all work out
