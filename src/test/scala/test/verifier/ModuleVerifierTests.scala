@@ -41,6 +41,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "apply"
+    ignore should "extend the verifiedDefs with the definitions found in all the passed modules" in {}
 
     // ------------------------------------------------------------------------
 
