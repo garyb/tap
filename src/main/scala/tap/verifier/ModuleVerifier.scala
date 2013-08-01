@@ -317,12 +317,17 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
         val mts = tcASTs.foldLeft(defs.mts) { case (result, (mId, ASTClass(tcName, _, _, members))) =>
 
-            val msntc = scopes(mId).tcs(tcName)
+            val currScope = scopes(mId)
+            val msntc = currScope.tcs(tcName)
             val tc = defs.tcs(msntc)
             val pred = IsIn(msntc, tc.vs)
 
             members.foldLeft(result) {
                 case (result, ast @ ASTClassMemberDef(id, qtype)) =>
+                    currScope.members.get(id) match {
+                        case Some(msn) if msn.mId != mId => throw NamespaceError("member", id, ast)
+                        case _ =>
+                    }
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
                     val qt0 = getMemberType(qId, qtype, defs)

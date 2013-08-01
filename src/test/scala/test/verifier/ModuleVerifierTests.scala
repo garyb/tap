@@ -598,7 +598,30 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "addTypeclassMemberDefs"
-    ignore should "throw an error if a member name overlaps with a module member name" in {}
+
+    it should "throw an error if the name of a member conflicts with an imported definition" in {
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
+                .addClass("C", ModuleId("Test", "C"))
+                .addMember("z", ModuleId("Prelude", "z"))))
+        val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
+        val defs = v.addTypeclassDefs(Seq("Test" -> c), nullDefs)
+        evaluating {
+            v.addTypeclassMemberDefs(Seq("Test" -> c), defs)
+        } should produce [NamespaceError]
+    }
+
+    it should "throw an error if a member name overlaps with a module member name" in {
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
+                .addClass("C", ModuleId("Test", "C"))
+                .addMember("z", ModuleId("Test", "z"))))
+        val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
+        val defs0 = v.addMemberDefs(Seq("Test" -> ASTDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))), nullDefs)
+        val defs1 = v.addTypeclassDefs(Seq("Test" -> c), defs0)
+        evaluating {
+            v.addTypeclassMemberDefs(Seq("Test" -> c), defs1)
+        } should produce [ModuleDuplicateDefinition]
+    }
+
     ignore should "handle members with additional typeclass predicates" in {}
     ignore should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {}
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
