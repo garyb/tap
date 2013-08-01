@@ -532,8 +532,6 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
                         :: origTCIs))
     }
 
-    ignore should "produce typeclass instances with members that make use of member-specific predicates" in {}
-
     it should "extend the tcis in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
         val defs = v.addTypeclassInstances(Seq(
