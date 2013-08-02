@@ -8,8 +8,6 @@ import tap.ast.parser.SExpressionParseException
 
 class ParserTests extends FlatSpec with ParserFixture {
 
-    // TODO: tests for things that shouldn't pass, more betterer tests generally
-
     behavior of "The s-expr parser"
 
     // ---[ values & expressions ]-------------------------------------------------------------------------------------
@@ -20,13 +18,11 @@ class ParserTests extends FlatSpec with ParserFixture {
         parseExpr("0xABCDEF") should be === ASTNumber(0xABCDEF)
         parseExpr("0x12345") should be === ASTNumber(0x12345)
         parseExpr("0x67890") should be === ASTNumber(0x67890)
-        // TODO: more thorough assertions
     }
 
     it should "parse string values" in {
         parseExpr(""""hello"""") should be === ASTString("hello")
         parseExpr(""""escape\" test"""") should be === ASTString("escape\" test")
-        // TODO: more thorough assertions
     }
 
     it should "parse native and wildcard special values" in {

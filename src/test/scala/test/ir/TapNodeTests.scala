@@ -163,17 +163,18 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
     it should "return a corresponding ASTCaseBranch" in {
 
         fromCaseAST(ASTCaseBranch(ASTWildcardValue, None, ASTNumber(0)), nullState) should
-                equal(MatchCase(WildcardValueExpr, None, NumberExpr(0)))
+            equal(MatchCase(WildcardValueExpr, None, NumberExpr(0)))
 
         fromCaseAST(ASTCaseBranch(ASTNumber(1), None, ASTNumber(1)), nullState) should
-                equal(MatchCase(NumberExpr(1), None, NumberExpr(1)))
+            equal(MatchCase(NumberExpr(1), None, NumberExpr(1)))
 
         When("the case has a guard")
         val x = ASTCaseBranch(ASTWildcardValue, Some(ASTValueRead("True")), ASTNumber(2))
 
         Then("the corresponding TapExpr for the guard should be produced too")
         val state = nullState.addLocal("True")
-        fromCaseAST(x, state) should equal(MatchCase(WildcardValueExpr, Some(ValueReadExpr(LocalId("True"))), NumberExpr(2)))
+        fromCaseAST(x, state) should
+                equal(MatchCase(WildcardValueExpr, Some(ValueReadExpr(LocalId("True"))), NumberExpr(2)))
     }
 
     it should "enable access to variables bound in the pattern" in {
@@ -228,7 +229,9 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
     }
 
     it should "throw an InvalidNativeError if no native has been defined for the current context" in {
-        evaluating { fromAST(ASTNativeValue, nullState, LocalId("Nothing"), Map.empty) } should produce [InvalidNativeError]
+        evaluating {
+            fromAST(ASTNativeValue, nullState, LocalId("Nothing"), Map.empty)
+        } should produce [InvalidNativeError]
     }
 
     // ------------------------------------------------------------------------
@@ -263,13 +266,13 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
     it should "produce a corresponding ApplyExpr for a no-argument apply" in {
         val state = nullState.addLocal("fn")
         fromAST(ASTApply(ASTValueRead("fn"), List()), state) should
-                equal(ApplyExpr(ValueReadExpr(LocalId("fn")), ValueReadExpr(ModuleId("Prelude", "Unit"))))
+            equal(ApplyExpr(ValueReadExpr(LocalId("fn")), ValueReadExpr(ModuleId("Prelude", "Unit"))))
     }
 
     it should "produce a corresponding chain of ApplyExprs for an apply with args" in {
         val state = nullState.addLocal("fn")
         fromAST(ASTApply(ASTValueRead("fn"), List(ASTNumber(1), ASTNumber(2))), state) should
-                equal(ApplyExpr(ApplyExpr(ValueReadExpr(LocalId("fn")), NumberExpr(1)), NumberExpr(2)))
+            equal(ApplyExpr(ApplyExpr(ValueReadExpr(LocalId("fn")), NumberExpr(1)), NumberExpr(2)))
     }
 
     it should "eta-abstract applications using wildcard placeholder arguments" in {
@@ -294,8 +297,13 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
     }
 
     it should "produce a corresponding MatchExpr" in {
-        fromAST(ASTMatch(ASTNumber(1), List(ASTCaseBranch(ASTWildcardValue, None, ASTNumber(0)), ASTCaseBranch(ASTNumber(1), None, ASTNumber(1)))), nullState) should
-                equal(MatchExpr(NumberExpr(1), List(MatchCase(WildcardValueExpr, None, NumberExpr(0)), MatchCase(NumberExpr(1), None, NumberExpr(1)))))
+        fromAST(ASTMatch(ASTNumber(1), List(
+            ASTCaseBranch(ASTWildcardValue, None, ASTNumber(0)),
+            ASTCaseBranch(ASTNumber(1), None, ASTNumber(1)))
+        ), nullState) should
+            equal(MatchExpr(NumberExpr(1), List(
+                MatchCase(WildcardValueExpr, None, NumberExpr(0)),
+                MatchCase(NumberExpr(1), None, NumberExpr(1)))))
     }
 
     // ------------------------------------------------------------------------
@@ -309,7 +317,7 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
     it should "allow recursive self-reference" in {
         fromAST(ASTLet("a", ASTValueRead("a")), nullState) should
-                equal(LetExpr("a", ValueReadExpr(LocalId("a")), ValueReadExpr(LocalId("a"))))
+            equal(LetExpr("a", ValueReadExpr(LocalId("a")), ValueReadExpr(LocalId("a"))))
     }
 
     // ------------------------------------------------------------------------
@@ -318,17 +326,17 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
     it should "produce a corresponding BlockExpr" in {
         fromAST(ASTBlock(List(ASTNumber(1), ASTNumber(2), ASTNumber(3))), nullState) should
-                equal(BlockExpr(List(NumberExpr(1), NumberExpr(2), NumberExpr(3))))
+            equal(BlockExpr(List(NumberExpr(1), NumberExpr(2), NumberExpr(3))))
     }
 
     it should "handle let scope creation" in {
         fromAST(ASTBlock(List(ASTLet("x", ASTNumber(1)), ASTValueRead("x"))), nullState) should
-                equal(LetExpr("x", NumberExpr(1), ValueReadExpr(LocalId("x"))))
+            equal(LetExpr("x", NumberExpr(1), ValueReadExpr(LocalId("x"))))
     }
 
     it should "allow recursive self-reference if the block contains a let" in {
         fromAST(ASTBlock(List(ASTLet("x", ASTValueRead("x")), ASTNumber(1))), nullState) should
-                equal(LetExpr("x", ValueReadExpr(LocalId("x")), NumberExpr(1)))
+            equal(LetExpr("x", ValueReadExpr(LocalId("x")), NumberExpr(1)))
     }
 
     // ------------------------------------------------------------------------

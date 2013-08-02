@@ -24,14 +24,14 @@ class QualTests extends FlatSpec {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
         val sc = Qual(Nil, Forall(0, List(Star), TGen(0, 0) fn (a fn TGen(0, 0))))
-        inst(sc.h, List(b), sc) should be === Qual(Nil, (b fn (a fn b)))
+        inst(sc.h, List(b), sc) should be === Qual(Nil, b fn (a fn b))
     }
 
     it should "only replace TGens belonging to the specified Forall" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
         val sc = Qual(Nil, Forall(0, List(Star), TGen(0, 0) fn Forall(1, List(Star), a fn TGen(1, 0))))
-        inst(sc.h, List(b), sc) should be === Qual(Nil, (b fn Forall(1, List(Star), a fn TGen(1, 0))))
+        inst(sc.h, List(b), sc) should be === Qual(Nil, b fn Forall(1, List(Star), a fn TGen(1, 0)))
     }
 
     it should "replace TGens in the predicates list" in {
@@ -50,7 +50,7 @@ class QualTests extends FlatSpec {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
         val sc = Qual(Nil, Forall(0, List(Star), TGen(0, 0) fn Forall(1, List(Star), a fn TGen(1, 0))))
-        inst(List(b), sc) should be === Qual(Nil, (b fn Forall(1, List(Star), a fn TGen(1, 0))))
+        inst(List(b), sc) should be === Qual(Nil, b fn Forall(1, List(Star), a fn TGen(1, 0)))
     }
 
     //-------------------------------------------------------------------------

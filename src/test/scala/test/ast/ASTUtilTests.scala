@@ -31,11 +31,7 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
     it should "throw an error if the type contains no type constructor" in {
         evaluating { getTConName(Map.empty, ASTTypeVar("a")) } should produce [Error]
         evaluating { getTConName(Map.empty, ASTTypeApply(ASTTypeVar("a"), Nil)) } should produce [Error]
-
-        // TODO: perhaps calling on function types should produce the tcon `->` actually
         evaluating { getTConName(Map.empty, ASTFunctionType(Nil)) } should produce [Error]
-
-        // TODO: perhaps calling on forall should work too?
         evaluating { getTConName(Map.empty, ASTForall(Nil, ASTTypeVar("a"))) } should produce [Error]
     }
 
