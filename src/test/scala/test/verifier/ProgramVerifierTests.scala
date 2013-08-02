@@ -10,6 +10,11 @@ import tap.verifier.errors.{ExportModuleWithoutImportError, ModuleMissingImports
 
 class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
 
+    behavior of "apply"
+    ignore should "throw an error if a module imports a non-existant named definition from another module" in {}
+
+    // ------------------------------------------------------------------------
+
     behavior of "findImports"
 
     it should "automatically include a reference to the Prelude module" in {
@@ -39,6 +44,8 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         val module = ASTModule("Test", List(ASTImport("Foo", None, None), ASTImport("Bar", None, None), ASTImport("Baz", None, None)))
         findImports(module) should be === Set(ASTImport("Prelude", None, None), ASTImport("Foo", None, None), ASTImport("Bar", None, None), ASTImport("Baz", None, None))
     }
+
+    // ------------------------------------------------------------------------
 
     behavior of "findModuleDependencies"
 
@@ -79,10 +86,17 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ExportModuleWithoutImportError]
     }
 
+    // ------------------------------------------------------------------------
+
     behavior of "makeScopedLookups"
 
+    ignore should "throw an error if a module has conflicting imports for a type constructor" in {}
+    ignore should "throw an error if a module has conflicting imports for a data constructor" in {}
+    ignore should "throw an error if a module has conflicting imports for a typeclass" in {}
+    ignore should "throw an error if a module has conflicting imports for a member" in {}
     ignore should "make scope maps" in {}
-    ignore should "throw an error if a module imports a non existant named definition from another module" in {}
+
+    // ------------------------------------------------------------------------
 
     behavior of "findExportedDefinitions"
 
