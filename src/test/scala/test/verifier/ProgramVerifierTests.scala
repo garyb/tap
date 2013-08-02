@@ -6,14 +6,9 @@ import tap.ast._
 import tap.verifier.ProgramVerifier._
 import tap.verifier.defs.DefinitionsLookup
 import tap.ModuleId
-import tap.verifier.errors.{ExportModuleWithoutImportError, ModuleMissingImportsError, ModuleSelfImportError}
+import tap.verifier.errors._
 
 class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
-
-    behavior of "apply"
-    ignore should "throw an error if a module imports a non-existant named definition from another module" in {}
-
-    // ------------------------------------------------------------------------
 
     behavior of "findImports"
 
@@ -89,6 +84,22 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "makeScopedLookups"
+
+    it should "throw an error if a module imports from a non-existant module" in {
+        val module = ASTModule("Test", List(ASTImport("Foo", Some(Set("thingy")), None)))
+        val imports = findImports(module)
+        evaluating {
+            makeScopedLookups(Map("Test" -> module), Map("Test" -> imports))
+        } should produce [UnknownModuleError]
+    }
+
+    it should "throw an error if a module imports a non-existant definition from another module" in {
+        val moduleA = ASTModule("Test", List(ASTImport("Foo", Some(Set("thingy")), None)))
+        val moduleB = ASTModule("Foo", Nil)
+        val modules = Map("Test" -> moduleA, "Foo" -> moduleB)
+        val imports = modules mapValues findImports
+        evaluating { makeScopedLookups(modules, imports) } should produce [UnknownImportDefsError]
+    }
 
     ignore should "throw an error if a module has conflicting imports for a type constructor" in {}
     ignore should "throw an error if a module has conflicting imports for a data constructor" in {}

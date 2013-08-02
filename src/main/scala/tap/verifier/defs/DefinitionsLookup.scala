@@ -1,7 +1,7 @@
 package tap.verifier.defs
 
 import tap.ModuleId
-import tap.verifier.errors.ImportConflictError
+import tap.verifier.errors.{UnknownImportDefsError, ImportConflictError}
 
 case class DefinitionsLookup(tcons: Map[String, ModuleId],
                                dcons: Map[String, ModuleId],
@@ -31,7 +31,7 @@ case class DefinitionsLookup(tcons: Map[String, ModuleId],
         }
 
         if (grouped.contains("invalid")) {
-            throw new Error("Module '" + inModule + "' attempted to import nonexistant definition(s) " + (grouped("invalid") mkString ", ") + " from '" + fromModule + "'")
+            throw UnknownImportDefsError(inModule, fromModule, grouped("invalid"))
         }
 
         DefinitionsLookup(

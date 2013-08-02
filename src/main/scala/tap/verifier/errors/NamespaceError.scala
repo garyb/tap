@@ -15,3 +15,9 @@ case class ImportConflictError(mId: String, defType: String, localId: String, id
 
 case class HidingImportError(mId: String, defType: String, id: String, iId: Id, src: FilePositional)
     extends PositionedError("Module '" + mId + "' declares " + defType + " '" + id + "' that conflicts with imported definition '" + prettyPrint(iId) + "'", src)
+
+case class UnknownModuleError(mId: String, src: FilePositional)
+    extends PositionedError("Unknown module '" + mId + "'", src)
+
+case class UnknownImportDefsError(inModule: String, fromModule: String, things: Iterable[String])
+    extends VerifierError("Module '" + inModule + "' attempted to import nonexistant definition(s) " + (things mkString ", ") + " from '" + fromModule + "'")

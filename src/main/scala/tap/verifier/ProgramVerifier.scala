@@ -1,7 +1,7 @@
 package tap.verifier
 
 import defs.{ModuleDefinitions, DefinitionsLookup}
-import errors.{ModuleSelfImportError, HidingImportError, ExportModuleWithoutImportError, ModuleMissingImportsError}
+import tap.verifier.errors._
 import tap.util.{trace, Graph}
 import tap.ir.TapNode
 import tap.types.classes.Qual
@@ -12,6 +12,22 @@ import tap.ModuleId
 import tap.ast.ASTDataTypeExport
 import tap.ast.ASTMemberExport
 import language.reflectiveCalls
+import tap.ast.ASTModule
+import tap.ast.ASTDataType
+import tap.verifier.errors.ExportModuleWithoutImportError
+import tap.verifier.errors.ModuleSelfImportError
+import tap.ModuleId
+import tap.ast.ASTDataTypeExport
+import scala.Some
+import tap.verifier.errors.HidingImportError
+import tap.ast.ASTImport
+import tap.ast.ASTClassExport
+import tap.ast.ASTMemberExport
+import tap.ast.ASTDef
+import tap.ast.ASTModuleExport
+import tap.verifier.errors.ModuleMissingImportsError
+import tap.ast.ASTClass
+import tap.ast.ASTLet
 
 object ProgramVerifier {
 
@@ -81,11 +97,11 @@ object ProgramVerifier {
      */
     def makeScopedLookups(asts: Modules, imports: Imports): Map[String, DefinitionsLookup] = {
         val lookups = asts mapValues { m => findExportedDefinitions(m.name, asts) }
-        asts mapValues { case ast @ ASTModule(mId, defs) =>
+        asts map { case (_, ast @ ASTModule(mId, defs)) =>
 
             val importedDefs = imports(mId).foldLeft(DefinitionsLookup.empty) {
-                case (importedDefs, ASTImport(name, defs, prefix)) =>
-                    var lookup = lookups(name)
+                case (importedDefs, ast @ ASTImport(name, defs, prefix)) =>
+                    var lookup = lookups.getOrElse(name, throw UnknownModuleError(name, ast))
                     if (defs != None) lookup = lookup.select(mId, name, defs.get)
                     if (prefix != None) lookup = lookup.addPrefix(prefix.get)
                     DefinitionsLookup.merge(mId, importedDefs, lookup)
@@ -109,15 +125,15 @@ object ProgramVerifier {
             val tcMemberDefs = tcDefs flatMap { tc => tc.members }
 
             val tcons = (dtDefs map getModuleId("type constructor", importedDefs.tcons)).toMap
-            val dcons = (tconDefs map getModuleId("data type", importedDefs.dcons)).toMap
-            val tcs = (tcDefs map getModuleId("type class", importedDefs.tcs)).toMap
+            val dcons = (tconDefs map getModuleId("data constructor", importedDefs.dcons)).toMap
+            val tcs = (tcDefs map getModuleId("typeclass", importedDefs.tcs)).toMap
             val mms =
                 (memberDefs map getModuleId("member", importedDefs.members)).toMap ++
                 (memberImpls map getModuleId("member", importedDefs.members)) ++
-                (tcMemberDefs map getModuleId("typeclass member", importedDefs.members))
+                (tcMemberDefs map getModuleId("member", importedDefs.members))
 
             val moduleDefs = DefinitionsLookup(tcons, dcons, tcs, mms)
-            DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
+            mId -> DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
         }
     }
 
