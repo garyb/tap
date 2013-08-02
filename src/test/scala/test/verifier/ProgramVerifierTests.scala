@@ -155,7 +155,37 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
     }
 
-    ignore should "make scope maps" in {}
+    it should "make scope maps" in {
+        val prelude = ASTModule("Prelude", Nil)
+        val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None), ASTImport("FooC", None, None)))
+        val moduleB = ASTModule("FooA", List(ASTLet("fn", ASTFunction(List("a"), ASTValueRead("a")))))
+        val moduleC = ASTModule("FooB", List(ASTClass("FooClass", Nil, List("a"), List(ASTClassMemberDef("cfn", ASTQType(Nil, ASTTypeVar("a")))))))
+        val moduleD = ASTModule("FooC", List(ASTDataType("TypeX", Nil, List(ASTDataCon("MakeX", Nil)))))
+        val modules = Map("Prelude" -> prelude, "Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC, "FooC" -> moduleD)
+        val imports = modules mapValues findImports
+        makeScopedLookups(modules, imports) should be ===
+            Map(
+                "Prelude" -> DefinitionsLookup.empty,
+                "Test" -> DefinitionsLookup.empty
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addMember("fn", ModuleId("FooA", "fn"))
+                        .addClass("FooClass", ModuleId("FooB", "FooClass"))
+                        .addMember("cfn", ModuleId("FooB", "cfn"))
+                        .addTCon("TypeX", ModuleId("FooC", "TypeX"))
+                        .addDCon("MakeX", ModuleId("FooC", "MakeX")),
+                "FooA" -> DefinitionsLookup.empty
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addMember("fn", ModuleId("FooA", "fn")),
+                "FooB" -> DefinitionsLookup.empty
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addClass("FooClass", ModuleId("FooB", "FooClass"))
+                        .addMember("cfn", ModuleId("FooB", "cfn")),
+                "FooC" -> DefinitionsLookup.empty
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("TypeX", ModuleId("FooC", "TypeX"))
+                        .addDCon("MakeX", ModuleId("FooC", "MakeX"))
+            )
+    }
 
     // ------------------------------------------------------------------------
 
