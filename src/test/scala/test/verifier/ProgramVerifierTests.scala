@@ -110,7 +110,15 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
     }
 
-    ignore should "throw an error if a module has conflicting imports for a data constructor" in {}
+    it should "throw an error if a module has conflicting imports for a data constructor" in {
+        val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None)))
+        val moduleB = ASTModule("FooA", List(ASTDataType("TypeX", Nil, List(ASTDataCon("MakeT", Nil)))))
+        val moduleC = ASTModule("FooB", List(ASTDataType("TypeY", Nil, List(ASTDataCon("MakeT", Nil)))))
+        val modules = Map("Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC)
+        val imports = modules mapValues findImports
+        evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
+    }
+
     ignore should "throw an error if a module has conflicting imports for a typeclass" in {}
 
     it should "throw an error if a module has conflicting imports for a member" in {
