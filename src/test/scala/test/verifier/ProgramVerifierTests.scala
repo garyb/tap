@@ -119,12 +119,37 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
     }
 
-    ignore should "throw an error if a module has conflicting imports for a typeclass" in {}
+    it should "throw an error if a module has conflicting imports for a typeclass" in {
+        val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None)))
+        val moduleB = ASTModule("FooA", List(ASTClass("FooClass", Nil, List("a"), List(ASTClassMemberDef("fnA", ASTQType(Nil, ASTTypeVar("a")))))))
+        val moduleC = ASTModule("FooB", List(ASTClass("FooClass", Nil, List("a"), List(ASTClassMemberDef("fnB", ASTQType(Nil, ASTTypeVar("a")))))))
+        val modules = Map("Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC)
+        val imports = modules mapValues findImports
+        evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
+    }
 
     it should "throw an error if a module has conflicting imports for a member" in {
         val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None)))
         val moduleB = ASTModule("FooA", List(ASTLet("fn", ASTFunction(List("a"), ASTValueRead("a")))))
         val moduleC = ASTModule("FooB", List(ASTLet("fn", ASTFunction(List("a"), ASTValueRead("a")))))
+        val modules = Map("Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC)
+        val imports = modules mapValues findImports
+        evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
+    }
+
+    it should "throw an error if a module has conflicting imports for a typeclass member" in {
+        val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None)))
+        val moduleB = ASTModule("FooA", List(ASTClass("FooClass1", Nil, List("a"), List(ASTClassMemberDef("fn", ASTQType(Nil, ASTTypeVar("a")))))))
+        val moduleC = ASTModule("FooB", List(ASTClass("FooClass2", Nil, List("a"), List(ASTClassMemberDef("fn", ASTQType(Nil, ASTTypeVar("a")))))))
+        val modules = Map("Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC)
+        val imports = modules mapValues findImports
+        evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
+    }
+
+    it should "throw an error if a module has conflicting imports for a typeclass member and normal member" in {
+        val moduleA = ASTModule("Test", List(ASTImport("FooA", None, None), ASTImport("FooB", None, None)))
+        val moduleB = ASTModule("FooA", List(ASTLet("fn", ASTFunction(List("a"), ASTValueRead("a")))))
+        val moduleC = ASTModule("FooB", List(ASTClass("FooClass2", Nil, List("a"), List(ASTClassMemberDef("fn", ASTQType(Nil, ASTTypeVar("a")))))))
         val modules = Map("Test" -> moduleA, "FooA" -> moduleB, "FooB" -> moduleC)
         val imports = modules mapValues findImports
         evaluating { makeScopedLookups(modules, imports) } should produce [ImportConflictError]
