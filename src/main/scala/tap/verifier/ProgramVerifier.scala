@@ -132,7 +132,16 @@ object ProgramVerifier {
                 (memberImpls map getModuleId("member", importedDefs.members)) ++
                 (tcMemberDefs map getModuleId("member", importedDefs.members))
 
-            val moduleDefs = DefinitionsLookup(tcons, dcons, tcs, mms)
+
+
+            val moduleDefs = if (mId == "Prelude") {
+                DefinitionsLookup(tcons, dcons, tcs, mms)
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var"))
+            } else {
+                DefinitionsLookup(tcons, dcons, tcs, mms)
+            }
             mId -> DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
         }
     }
@@ -182,8 +191,11 @@ object ProgramVerifier {
             }
         }
         val result = find(mId, Set(mId))
-        // TODO: a non-hacky way of doing this... really it should be possible to declare dcons and tcons with symbol names
-        if (mId == "Prelude") result.addTCon("->", ModuleId("Prelude", "->"))
+        if (mId == "Prelude") {
+            result.addTCon("->", ModuleId("Prelude", "->"))
+                  .addTCon("Var", ModuleId("Prelude", "Var"))
+                  .addDCon("Var", ModuleId("Prelude", "Var"))
+        }
         else result
     }
 }

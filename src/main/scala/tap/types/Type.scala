@@ -32,7 +32,7 @@ object Type {
     val tBool: Type   = TCon(id("Bool"), Star)
     val tUnit: Type   = TCon(id("Unit"), Star)
     val tList: Type   = TCon(id("List"), Kfun(Star, Star))
-    val tVar: Type    = TCon(id("Var"), Star)
+    val tVar: Type    = TCon(id("Var"), Kfun(Star, Star))
     val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))
 
     /**

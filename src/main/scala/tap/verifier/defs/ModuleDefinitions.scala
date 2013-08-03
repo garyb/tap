@@ -1,7 +1,7 @@
 package tap.verifier.defs
 
 import tap.ir.TapExpr
-import tap.types.Type.tArrow
+import tap.types.Type._
 import tap.types._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{Qual, TypeclassDef}
@@ -15,5 +15,16 @@ case class ModuleDefinitions(tcons: Map[ModuleId, TCon],
                              mis: Map[Id, TapExpr])
 
 object ModuleDefinitions {
-    val empty = ModuleDefinitions(Map(ModuleId("Prelude", "->") -> tArrow.asInstanceOf[TCon]), Map.empty, Map.empty, Map.empty, Map.empty, Map.empty/*, Map.empty, Map.empty*/)
+    val empty = ModuleDefinitions(
+        Map(
+            ModuleId("Prelude", "->") -> tArrow.asInstanceOf[TCon],
+            ModuleId("Prelude", "Var") -> tVar.asInstanceOf[TCon]
+        ),
+        Map(
+            ModuleId("Prelude", "Var") -> tVar
+        ),
+        Map.empty,
+        Map.empty,
+        Map.empty,
+        Map.empty)
 }

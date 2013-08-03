@@ -165,9 +165,14 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         val imports = modules mapValues findImports
         makeScopedLookups(modules, imports) should be ===
             Map(
-                "Prelude" -> DefinitionsLookup.empty,
+                "Prelude" -> DefinitionsLookup.empty
+                        .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var")),
                 "Test" -> DefinitionsLookup.empty
                         .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var"))
                         .addMember("fn", ModuleId("FooA", "fn"))
                         .addClass("FooClass", ModuleId("FooB", "FooClass"))
                         .addMember("cfn", ModuleId("FooB", "cfn"))
@@ -175,13 +180,19 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
                         .addDCon("MakeX", ModuleId("FooC", "MakeX")),
                 "FooA" -> DefinitionsLookup.empty
                         .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var"))
                         .addMember("fn", ModuleId("FooA", "fn")),
                 "FooB" -> DefinitionsLookup.empty
                         .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var"))
                         .addClass("FooClass", ModuleId("FooB", "FooClass"))
                         .addMember("cfn", ModuleId("FooB", "cfn")),
                 "FooC" -> DefinitionsLookup.empty
                         .addTCon("->", ModuleId("Prelude", "->"))
+                        .addTCon("Var", ModuleId("Prelude", "Var"))
+                        .addDCon("Var", ModuleId("Prelude", "Var"))
                         .addTCon("TypeX", ModuleId("FooC", "TypeX"))
                         .addDCon("MakeX", ModuleId("FooC", "MakeX"))
             )
