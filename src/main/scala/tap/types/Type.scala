@@ -26,19 +26,19 @@ object Type {
 
     private def id(name: String) = ModuleId("Prelude", name)
 
+    /**
+     * Constructs a function type.
+     */
+    implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
+
     val tArrow: Type  = TCon(id("->"), Kfun(Star, Kfun(Star, Star)))
     val tNumber: Type = TCon(id("Number"), Star)
     val tString: Type = TCon(id("String"), Star)
     val tBool: Type   = TCon(id("Bool"), Star)
     val tUnit: Type   = TCon(id("Unit"), Star)
     val tList: Type   = TCon(id("List"), Kfun(Star, Star))
-    val tVar: Type    = TCon(id("Var"), Kfun(Star, Star))
+    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(id("Var"), Kfun(Star, Star)), TVar("a", Star)))
     val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))
-
-    /**
-     * Constructs a function type.
-     */
-    implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
 
     /**
      * Finds the ID of a type constructor in the specified type. This should only be called when it is known the type

@@ -6,6 +6,7 @@ import tap.types._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{Qual, TypeclassDef}
 import tap.{ModuleId, Id}
+import tap.types.kinds.{Star, Kfun}
 
 case class ModuleDefinitions(tcons: Map[ModuleId, TCon],
                              dcons: Map[ModuleId, Type],
@@ -18,7 +19,7 @@ object ModuleDefinitions {
     val empty = ModuleDefinitions(
         Map(
             ModuleId("Prelude", "->") -> tArrow.asInstanceOf[TCon],
-            ModuleId("Prelude", "Var") -> tVar.asInstanceOf[TCon]
+            ModuleId("Prelude", "Var") -> TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star))
         ),
         Map(
             ModuleId("Prelude", "Var") -> tVar
