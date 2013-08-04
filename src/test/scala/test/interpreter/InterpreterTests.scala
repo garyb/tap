@@ -88,7 +88,21 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
         ))) should be === iTuple2(iSome(iTrue), iTrue)
     }
 
+    it should "evaluate matches with guards" in {
+
+        eval(MatchExpr(eTrue, List(
+            MatchCase(UnapplyNode(idTrue, Nil), Some(ApplyExpr(ApplyExpr(native(`Num==Num`), NumberExpr(1)), NumberExpr(1))), NumberExpr(1)),
+            MatchCase(UnapplyNode(idTrue, Nil), None, NumberExpr(2))
+        ))) should be === INumber(1)
+
+        eval(MatchExpr(eTrue, List(
+            MatchCase(UnapplyNode(idTrue, Nil), Some(ApplyExpr(ApplyExpr(native(`Num==Num`), NumberExpr(1)), NumberExpr(2))), NumberExpr(1)),
+            MatchCase(UnapplyNode(idTrue, Nil), Some(ApplyExpr(ApplyExpr(native(`Num==Num`), NumberExpr(2)), NumberExpr(2))), NumberExpr(2))
+        ))) should be === INumber(2)
+    }
+
     it should "only evaluate the correct branch when matching" in {
+
         eval(LetExpr("xs", eVar(eEOL), BlockExpr(List(
             MatchExpr(eFalse, List(
                 MatchCase(UnapplyNode(idTrue, Nil), None, ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(0), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs")))))),
@@ -96,6 +110,14 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
             )),
             ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))) should be ===
                 iCons(INumber(1), iEOL)
+
+        eval(LetExpr("xs", eVar(eEOL), BlockExpr(List(
+            MatchExpr(eTrue, List(
+                MatchCase(UnapplyNode(idTrue, Nil), Some(ApplyExpr(ApplyExpr(native(`Num==Num`), NumberExpr(1)), NumberExpr(1))), ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(0), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs")))))),
+                MatchCase(UnapplyNode(idTrue, Nil), None, ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(1), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))
+            )),
+            ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))) should be ===
+                iCons(INumber(0), iEOL)
     }
 
     it should "evaluate the contents of cast expressions" in {
