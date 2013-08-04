@@ -51,8 +51,6 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
 
     it should "evaluate matches" in {
 
-        // TODO: check only the correct branch is evaluated
-
         When("dealing with wildcard matching")
         eval(MatchExpr(eTrue, List(
             MatchCase(WildcardValueExpr, None, eTrue)
@@ -72,6 +70,12 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
         eval(MatchExpr(eTrue, List(
             MatchCase(BindNode("x", None), None, ValueReadExpr(LocalId("x")))
         ))) should be === iTrue
+
+        When("dealing with basic data constructor matching")
+        eval(MatchExpr(eFalse, List(
+            MatchCase(UnapplyNode(idTrue, Nil), None, NumberExpr(1)),
+            MatchCase(UnapplyNode(idFalse, Nil), None, NumberExpr(2))
+        ))) should be === INumber(2)
 
         When("dealing with destructuring")
         eval(MatchExpr(eTuple2(eFalse, eTrue), List(
