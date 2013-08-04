@@ -30,7 +30,7 @@ object Natives {
     val types: Map[Id, Type] = Map(
 
         `get!` -> (TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
-        `set!` -> (TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TVar("a", Star))),
+        `set!` -> (TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)))),
 
         `Num+Num` -> (tNumber fn (tNumber fn tNumber)),
         `String+String` -> (tString fn (tString fn tString)),

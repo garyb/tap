@@ -18,9 +18,9 @@ object InterpreterNatives {
         },
 
         `set!` -> make2 {
-            case List(IData(ModuleId("Prelude", "Var"), items), x) =>
+            case List(v @ IData(ModuleId("Prelude", "Var"), items), x) =>
                 items(0) = x
-                x
+                v
             case _ => throw InterpreterError("Invalid type")
         },
 
