@@ -88,6 +88,16 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
         ))) should be === iTuple2(iSome(iTrue), iTrue)
     }
 
+    it should "only evaluate the correct branch when matching" in {
+        eval(LetExpr("xs", eVar(eEOL), BlockExpr(List(
+            MatchExpr(eFalse, List(
+                MatchCase(UnapplyNode(idTrue, Nil), None, ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(0), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs")))))),
+                MatchCase(UnapplyNode(idFalse, Nil), None, ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(1), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))
+            )),
+            ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))) should be ===
+                iCons(INumber(1), iEOL)
+    }
+
     it should "evaluate the contents of cast expressions" in {
         eval(CastExpr(eTrue, TCon(ModuleId("Prelude", "Boolean"), Star))) should be === iTrue
     }
