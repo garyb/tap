@@ -40,13 +40,13 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
         eval(ApplyExpr(eFnIdentity, eTrue)) should be === iTrue
     }
 
-    ignore should "evaluate all expressions in a block" in {
-        /*eval(VarExpr("xs", eEOL, BlockExpr(List(
-            ValueSetExpr("xs", eCons(NumberExpr(3), ValueReadExpr(LocalId("xs")))),
-            ValueSetExpr("xs", eCons(NumberExpr(2), ValueReadExpr(LocalId("xs")))),
-            ValueSetExpr("xs", eCons(NumberExpr(1), ValueReadExpr(LocalId("xs")))),
-            ValueReadExpr(LocalId("xs")))))) should be ===
-        iCons(INumber(1), iCons(INumber(2), iCons(INumber(3), iEOL)))*/
+    it should "evaluate all expressions in a block" in {
+        eval(LetExpr("xs", eVar(eEOL), BlockExpr(List(
+            ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(3), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))),
+            ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(2), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))),
+            ApplyExpr(ApplyExpr(native(`set!`), ValueReadExpr(LocalId("xs"))), eCons(NumberExpr(1), ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))),
+            ApplyExpr(native(`get!`), ValueReadExpr(LocalId("xs"))))))) should be ===
+        iCons(INumber(1), iCons(INumber(2), iCons(INumber(3), iEOL)))
     }
 
     it should "evaluate matches" in {
@@ -104,8 +104,8 @@ class InterpreterTests extends FlatSpec with GivenWhenThen with InterpreterFixtu
         eval(ApplyExpr(native(`get!`), ApplyExpr(ValueReadExpr(idVar), NumberExpr(1)))) should be === INumber(1)
     }
 
-    ignore should "evaluate native set!" in {
-        //eval(ApplyExpr(ApplyExpr(native(`Num+Num`), NumberExpr(1)), NumberExpr(2))) should be === INumber(1 + 2)
+    it should "evaluate native set!" in {
+        eval(ApplyExpr(ApplyExpr(native(`set!`), eVar(NumberExpr(1))), NumberExpr(2))) should be === iVar(INumber(2))
     }
 
     it should "evaluate native num/num +" in {

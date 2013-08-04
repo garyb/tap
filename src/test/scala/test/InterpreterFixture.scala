@@ -12,12 +12,12 @@ trait InterpreterFixture {
     val idTrue = ModuleId("Prelude", "True")
     val idFalse = ModuleId("Prelude", "False")
     val idUnit = ModuleId("Prelude", "Unit")
+    val idVar = ModuleId("Prelude", "Var")
     val idTuple2 = ModuleId("Prelude.Tuple", "Tuple2")
     val idCons = ModuleId("Prelude", ":")
     val idEOL = ModuleId("Prelude", "EOL")
     val idSome = ModuleId("Prelude", "Some")
     val idNone = ModuleId("Prelude", "None")
-    val idVar = ModuleId("Prelude", "Var")
 
     val defaultScope: Scope = Map(
         idTrue -> iTrue,
@@ -54,7 +54,8 @@ trait InterpreterFixture {
     val iEOL = IData(idEOL, ArrayBuffer.empty)
     val eEOL = ValueReadExpr(idEOL)
 
-    def iVar(x: IValue): IValue = IData(idVar, ArrayBuffer(x))
+    def eVar(x: TapExpr) = ApplyExpr(ValueReadExpr(idVar), x)
+    def iVar(x: IValue) = IData(idVar, ArrayBuffer(x))
 
     val eFnIdentity = FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))
 }
