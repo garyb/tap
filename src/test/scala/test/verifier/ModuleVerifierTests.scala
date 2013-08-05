@@ -648,7 +648,25 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         evaluating { v.addTypeclassMemberDefs(Seq("Test" -> c), defs0) } should produce [KindMismatchError]
     }
 
-    ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
+    it should "extend the mts in the definitions list and leave all existing values unchanged" in {
+        val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
+                .addClass("C", ModuleId("Test", "C"))))
+        val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("ccc",
+            ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
+        val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
+        val defs1 = v.addTypeclassMemberDefs(Seq("Test" -> c), defs0)
+        val fi = Type.lastForallId
+        defs1.tcons should be === defs0.tcons
+        defs1.dcons should be === defs0.dcons
+        defs1.tcs should be === defs0.tcs
+        defs1.tcis should be === defs0.tcis
+        defs1.mts should be === defs0.mts + (ModuleId("Test", "ccc") -> Qual(List(IsIn(ModuleId("Test", "C"), List(TGen(fi, 0)))),
+            Forall(fi, List(Star), TGen(fi, 0) fn TGen(fi, 0))))
+        (defs1.mis zip defs0.mis) foreach { case ((k1, v1), (k2, v2)) =>
+            k1 should be === k2
+            v1 should equal(v2)
+        }
+    }
 
     // ------------------------------------------------------------------------
 
