@@ -13,7 +13,6 @@ import tap.types.classes.{Qual, IsIn, TypeclassDef}
 import tap.types.classes.ClassEnvironments.Inst
 import tap.ir.ValueReadExpr
 import language.reflectiveCalls
-import tap.util.trace
 
 class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
 
@@ -622,7 +621,20 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ModuleDuplicateDefinition]
     }
 
-    ignore should "handle members with additional typeclass predicates" in {}
+    it should "handle members with additional typeclass predicates" in {
+        val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
+                .addClass("C", ModuleId("Test", "C"))))
+        val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("ccc",
+            ASTQType(List(ASTClassRef("Y", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))))))
+        val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
+        val defs1 = v.addTypeclassMemberDefs(Seq("Test" -> c), defs0)
+        val fi = Type.lastForallId
+        defs1.mts(ModuleId("Test", "ccc")) should be === Qual(List(
+            IsIn(ModuleId("Test", "C"), List(TGen(fi, 0))),
+            IsIn(ModuleId("Test", "Y"), List(TGen(fi, 1)))),
+                Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TGen(fi, 0))))
+    }
+
     ignore should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {}
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
 
