@@ -39,7 +39,7 @@ class QualTests extends FlatSpec {
         val b = TVar("b", Star)
         val ps = IsIn(ModuleId("Test", "TC"), List(TGen(0, 0)))
         val sc = Qual(List(ps), Forall(0, List(Star), TGen(0, 0) fn (a fn TGen(0, 0))))
-        inst(sc.h, List(b), sc) should be === Qual(List(IsIn(ModuleId("Test", "TC"), List(b))), (b fn (a fn b)))
+        inst(sc.h, List(b), sc) should be === Qual(List(IsIn(ModuleId("Test", "TC"), List(b))), b fn (a fn b))
     }
 
     //-------------------------------------------------------------------------
@@ -59,7 +59,7 @@ class QualTests extends FlatSpec {
 
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
-        quantify(List.empty, Qual(Nil, a fn a)) should be === Qual(Nil, (a fn a))
+        quantify(List.empty, Qual(Nil, a fn a)) should be === Qual(Nil, a fn a)
     }
 
     it should "only quantify type variables in the provided list" in {
