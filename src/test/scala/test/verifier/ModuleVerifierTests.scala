@@ -24,7 +24,8 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star),
                 ModuleId("Test", "X1") -> TCon(ModuleId("Test", "X1"), Kfun(Star, Star))),
             Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
-            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty)),
+            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty),
+                ModuleId("Test", "Y2") -> TypeclassDef(ModuleId("Test", "Y2"), Nil, List(TVar("a", Star), TVar("b", Star)), Set("yfn"), Set.empty)),
             Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
             Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star)),
                 ModuleId("Test", "yfn") -> Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TVar("a", Star) fn TVar("a", Star))),
@@ -35,6 +36,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
             .addTCon("X1", ModuleId("Test", "X1"))
             .addDCon("X", ModuleId("Test", "X"))
             .addClass("Y", ModuleId("Test", "Y"))
+            .addClass("Y2", ModuleId("Test", "Y2"))
             .addMember("z", ModuleId("Test", "z")))
 
     // ------------------------------------------------------------------------
@@ -635,7 +637,17 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
                 Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TGen(fi, 0))))
     }
 
-    ignore should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {}
+    it should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {
+        val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
+                .addClass("C", ModuleId("Test", "C"))))
+        val c = ASTClass("C", Nil, List("a", "b"), List(
+            ASTClassMemberDef("bbb", ASTQType(Nil, ASTFunctionType(List(ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))), ASTTypeVar("b"))))),
+            ASTClassMemberDef("ccc", ASTQType(List(ASTClassRef("Y2", List("a", "c"))), ASTFunctionType(List(ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))), ASTTypeVar("c"), ASTTypeVar("c")))))))
+
+        val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
+        evaluating { v.addTypeclassMemberDefs(Seq("Test" -> c), defs0) } should produce [KindMismatchError]
+    }
+
     ignore should "extend the mts in the definitions list and leave all existing values unchanged" in {}
 
     // ------------------------------------------------------------------------
