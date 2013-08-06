@@ -47,16 +47,14 @@ object TypeInference {
     def freshInstPartial(ts0: List[Type], s: Qual[Type]): Qual[Type] = s match {
         case Qual(ps, sc @ Forall(_, ks, t)) =>
             val ts1 = ks.drop(ts0.size) map newTVar
-            val ts = ts0 ++ ts1
-            Qual.inst(sc, ts, Qual(ps, t))
+            Qual.inst(sc, ts0 ++ ts1, Qual(ps, t))
         case s => s
     }
 
     def freshInstPartial(ts0: List[Type], s: Type): Type = s match {
         case sc @ Forall(_, ks, t) =>
             val ts1 = ks.drop(ts0.size) map newTVar
-            val ts = ts0 ++ ts1
-            Type.inst(sc, ts, t)
+            Type.inst(sc, ts0 ++ ts1, t)
         case s => s
     }
 
@@ -161,14 +159,14 @@ object TypeInference {
     def tiBranch(ce: ClassEnv, as: Assumps, ctx: Context, t: Type, v: Type, node: MatchCase, explArgs: List[Type]): (Context, List[IsIn]) = node match {
 
         case MatchCase(pat, None, f) =>
-            val (as1, ctx1, ps, t1) = tiPattern(as, ctx, pat, explArgs)
+            val (as1, ctx1, ps, t1) = tiPattern(as, ctx, pat)
             val (ctx2, qs, t2) = tiExpr(ce, as1, ctx1, f, explArgs)
             val ctx3 = ctx2.unify(t1, t, pat)
                            .unify(t2, v, f)
             (ctx3.setNodeType(node, t), ps ++ qs)
 
         case MatchCase(pat, Some(g), f) =>
-            val (as1, ctx1, ps, t1) = tiPattern(as, ctx, pat, explArgs)
+            val (as1, ctx1, ps, t1) = tiPattern(as, ctx, pat)
             val (ctx2, rs, t3) = tiExpr(ce, as1, ctx1, g, explArgs)
             val (ctx3, qs, t2) = tiExpr(ce, as1, ctx2, f, explArgs)
             val ctx4 = ctx3.unify(t1, t, pat)
@@ -177,13 +175,12 @@ object TypeInference {
             (ctx4.setNodeType(node, t), ps ++ rs ++ qs)
     }
 
-    def tiPattern(as: Assumps, ctx: Context, node: PatternNode, explArgs: List[Type]): (Assumps, Context, List[IsIn], Type) = node match {
+    def tiPattern(as: Assumps, ctx: Context, node: PatternNode): (Assumps, Context, List[IsIn], Type) = node match {
 
         case UnapplyNode(name, args) =>
-            val (as1, ctx1, ps, ts) = tiPatterns(as, ctx, args, explArgs)
+            val (as1, ctx1, ps, ts) = tiPatterns(as, ctx, args)
             val t1 = newTVar(Star)
-            val sc = as1(name)
-            val Qual(qs, t) = freshInst(sc)
+            val Qual(qs, t) = freshInst(as1(name))
             val t2 = ts.foldRight(t1) { _ fn _ }
             val ctx2 = ctx1.unify(t, t2, node)
             (as1, ctx2.setNodeType(node, t1), ps ++ qs, t1)
@@ -193,7 +190,7 @@ object TypeInference {
             (as + (LocalId(name) -> Qual(Nil, v)), ctx.setNodeType(node, v), Nil, v)
 
         case BindNode(name, Some(pat)) =>
-            val (as1, ctx1, ps, t) = tiPattern(as, ctx, pat, explArgs)
+            val (as1, ctx1, ps, t) = tiPattern(as, ctx, pat)
             (as1 + (LocalId(name) -> Qual(Nil, t)), ctx1.setNodeType(node, t), ps, t)
 
         case _: StringExpr => (as, ctx.setNodeType(node, tString), Nil, tString)
@@ -204,9 +201,9 @@ object TypeInference {
             (as, ctx.setNodeType(node, v), Nil, v)
     }
 
-    def tiPatterns(as: Assumps, ctx: Context, pats: List[PatternNode], explArgs: List[Type]): (Assumps, Context, List[IsIn], List[Type]) =
+    def tiPatterns(as: Assumps, ctx: Context, pats: List[PatternNode]): (Assumps, Context, List[IsIn], List[Type]) =
         pats.foldRight((as, ctx, List.empty[IsIn], List.empty[Type])) { case (pat, (as, ctx, ps, ts)) =>
-            val (as1, ctx1, qs, t) = tiPattern(as, ctx, pat, explArgs)
+            val (as1, ctx1, qs, t) = tiPattern(as, ctx, pat)
             (as1, ctx1, ps ++ qs, t :: ts)
         }
 
@@ -217,30 +214,7 @@ object TypeInference {
     type Expl = (Id, Qual[Type], TapExpr)
     type Impl = (Id, TapExpr)
     type BindGroup = (List[Expl], List[List[Impl]])
-
-    /**
-     * Infers the types of the definitions within a binding group.
-     */
-    def tiBindGroup(ce: ClassEnv, as: Assumps, ctx: Context, bg: BindGroup): (Assumps, Context, List[IsIn]) = {
-        val (es, iss) = bg
-        val as1 = as ++ (es collect { case (v, sc, _) => v -> sc })
-        val (as2, ctx1, ps) = tiSeq(tiImpls, ce, as1, ctx, iss)
-        val (ctx2, qs) = ctx1.flatMap(es) { case (ctx, e) => tiExpl(ce, as2, ctx, e) }
-        (as2, ctx2, ps ++ qs)
-    }
-
     type Infer[E] = (ClassEnv, Assumps, Context, E) => (Assumps, Context, List[IsIn])
-
-    /**
-     * Type-check a list of binding groups and accumulate assumptions while running through the list.
-     */
-    def tiSeq[BG](ti: Infer[BG], ce: ClassEnv, as: Assumps, ctx: Context, bs: List[BG]): (Assumps, Context, List[IsIn]) = bs match {
-        case List() => (as, ctx, Nil)
-        case bs :: bss =>
-            val (as1, ctx1, ps) = ti(ce, as, ctx, bs)
-            val (as2, ctx2, qs) = tiSeq(ti, ce, as1, ctx1, bss)
-            (as2, ctx2, ps ++ qs)
-    }
 
     /**
      * Type infers a definition and checks it against an expected type. Used by both implicit and explicitly typed
@@ -288,13 +262,35 @@ object TypeInference {
         val (ctx1, ps) = ctx.flatMap(es zip ts) { case (ctx, (e, t)) => tiDef(ce, as1, ctx, e, t) }
         val ps1 = ps map { applySubst(ctx1.s, _) }
         val ts1 = ts map { applySubst(ctx1.s, _) }
-        val fs = (as.values.toList map { applySubst(ctx1.s, _) } flatMap { tv(_) }).distinct
+        val fs = (as.values.toList map { applySubst(ctx1.s, _) } flatMap tv).distinct
         val vss = ts1 map tv
-        val gs = (vss.foldLeft(List.empty[TVar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) }) diff fs
+        val gs = vss.foldLeft(List.empty[TVar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) } diff fs
         val (ds, rs) = split(ce, fs, ps1)
         val scs1 = ts1 map { t => Qual.quantify(gs, Qual(rs, t)) }
         val ctx2 = ctx1.foreach(es zip ts1) { case (ctx, (e, t)) => ctx.setNodeType(e, Qual(rs, t)) }
         (as ++ (is zip scs1), ctx2, ds)
+    }
+
+    /**
+     * Type-check a list of binding groups and accumulate assumptions while running through the list.
+     */
+    def tiSeq[BG](ti: Infer[BG], ce: ClassEnv, as: Assumps, ctx: Context, bs: List[BG]): (Assumps, Context, List[IsIn]) = bs match {
+        case List() => (as, ctx, Nil)
+        case bs :: bss =>
+            val (as1, ctx1, ps) = ti(ce, as, ctx, bs)
+            val (as2, ctx2, qs) = tiSeq(ti, ce, as1, ctx1, bss)
+            (as2, ctx2, ps ++ qs)
+    }
+
+    /**
+     * Infers the types of the definitions within a binding group.
+     */
+    def tiBindGroup(ce: ClassEnv, as: Assumps, ctx: Context, bg: BindGroup): (Assumps, Context, List[IsIn]) = {
+        val (es, iss) = bg
+        val as1 = as ++ (es collect { case (v, sc, _) => v -> sc })
+        val (as2, ctx1, ps) = tiSeq(tiImpls, ce, as1, ctx, iss)
+        val (ctx2, qs) = ctx1.flatMap(es) { case (ctx, e) => tiExpl(ce, as2, ctx, e) }
+        (as2, ctx2, ps ++ qs)
     }
 
     def tiProgram(ce: ClassEnv, as: Assumps, bgs: List[BindGroup]): (Assumps, Subst, ExprTypeMap) = {
