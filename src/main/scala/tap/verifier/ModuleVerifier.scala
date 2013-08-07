@@ -347,7 +347,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val ms = scopes(mId)
             val rs = ResolveState(ms.dcons, ms.members, Set.empty, ms.tcons, defs.tcons)
 
-            val mis: Map[Id, TapExpr] = (m.members.collect { case ASTLet(name, expr) =>
+            val mis: Seq[(Id, TapExpr)] = m.members.collect { case ASTLet(name, expr) =>
                 val id = ModuleId(mId, name)
                 id -> TapNode.fromAST(expr, rs, id, Natives.types)
             } ++
@@ -362,9 +362,15 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     val id = InstId(m.name, ms.tcs(tci.tcName), tci.params map { p => ASTUtil.getTConName(ms.tcons, p) }, name)
                     id -> TapNode.fromAST(tcim, rs, id, Natives.types)
                 }
-            }.flatten).toMap
+            }.flatten
 
-            val mDeps = mis mapValues { mi => TapNodeUtil.findImmediateDependencies(mi).toList } filter { case (id, deps) => deps.nonEmpty }
+            val miMap = mis.foldLeft(Map.empty: Map[Id, TapExpr]) {
+                case (result, kv @ (id, expr)) =>
+                    if (result contains id) throw ModuleDuplicateDefinition(mId, "member", id.id, expr)
+                    result + kv
+            }
+
+            val mDeps = miMap mapValues { mi => TapNodeUtil.findImmediateDependencies(mi).toList } filter { case (id, deps) => deps.nonEmpty }
             val extDeps = mDeps.values.flatten.toSet.filter { id => !(mDeps contains id) }
 
             val xss = Graph.components(mDeps ++ extDeps.map { _ -> Seq.empty })
