@@ -3,7 +3,7 @@ package test.verifier
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ast._
-import tap.ModuleId
+import tap.{LocalId, ModuleId}
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.ModuleVerifier
 import tap.verifier.errors._
@@ -11,10 +11,11 @@ import tap.types._
 import tap.types.kinds._
 import tap.types.classes.{Qual, IsIn, TypeclassDef}
 import tap.types.classes.ClassEnvironments.Inst
-import tap.ir.ValueReadExpr
+import tap.ir._
 import language.reflectiveCalls
+import test.TapNodeEquality
 
-class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
+class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
     val nullDefs = ModuleDefinitions(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
     val nullScopes = Map("Test" -> DefinitionsLookup.empty)
@@ -197,6 +198,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         defs.tcs should be === testDefs.tcs
         defs.tcis should be === testDefs.tcis
         defs.mts should be === testDefs.mts
+        defs.mis.size should be === testDefs.mis.size
         (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
@@ -428,6 +430,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         defs.tcs should be === testDefs.tcs + (ModuleId("Test", "A") -> TypeclassDef(ModuleId("Test", "A"), Nil, List(TVar("a", Star)), Set.empty, Set.empty))
         defs.tcis should be === testDefs.tcis
         defs.mts should be === testDefs.mts
+        defs.mis.size should be === testDefs.mis.size
         (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
@@ -551,6 +554,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
                     IsIn(ModuleId("Test", "Y"), List(TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star)))))
                         :: origTCIs))
         defs.mts should be === testDefs.mts
+        defs.mis.size should be === testDefs.mis.size
         (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
@@ -590,6 +594,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         defs.tcs should be === testDefs.tcs
         defs.tcis should be === testDefs.tcis
         defs.mts should be === testDefs.mts + (ModuleId("Test", "A") -> Qual(Nil, testDefs.tcons(ModuleId("Test", "X"))))
+        defs.mis.size should be === testDefs.mis.size
         (defs.mis zip testDefs.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
@@ -662,6 +667,7 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         defs1.tcis should be === defs0.tcis
         defs1.mts should be === defs0.mts + (ModuleId("Test", "ccc") -> Qual(List(IsIn(ModuleId("Test", "C"), List(TGen(fi, 0)))),
             Forall(fi, List(Star), TGen(fi, 0) fn TGen(fi, 0))))
+        defs1.mis.size should be === defs0.mis.size
         (defs1.mis zip defs0.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
             v1 should equal(v2)
@@ -712,7 +718,23 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ModuleMemberInitCycleError]
     }
 
-    ignore should "extend the mis in the definitions list and leave all existing values unchanged" in {}
+    it should "extend the mis in the definitions list and leave all existing values unchanged" in {
+        val v = new ModuleVerifier(testScopes)
+        val mi = new ASTLet("member", ASTFunction(List("x"), ASTValueRead("x")))
+        val m = new ASTModule("Test", List(mi))
+        val defs = v.addMemberImplementations(Seq(m), Nil, testDefs)
+        defs.tcons should be === testDefs.tcons
+        defs.dcons should be === testDefs.dcons
+        defs.tcs should be === testDefs.tcs
+        defs.tcis should be === testDefs.tcis
+        defs.mts should be === testDefs.mts
+        val testMis = testDefs.mis + (ModuleId("Test", "member") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x"))))
+        defs.mis.size should be === testMis.size
+        (defs.mis zip testMis) foreach { case ((k1, v1), (k2, v2)) =>
+            k1 should be === k2
+            v1 should equal(v2)
+        }
+    }
 
     // ------------------------------------------------------------------------
 
