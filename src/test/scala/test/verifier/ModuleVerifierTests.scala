@@ -690,7 +690,18 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ModuleDuplicateDefinition]
     }
 
-    ignore should "throw an error if there is a cycle in initialising a group of members"
+    it should "throw an error if there is a cycle in initialising a group of members" in {
+        val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
+                .addMember("memberX", ModuleId("Test", "memberX"))
+                .addMember("memberY", ModuleId("Test", "memberY"))))
+        val miX = new ASTLet("memberX", ASTValueRead("memberY"))
+        val miY = new ASTLet("memberY", ASTValueRead("memberX"))
+        val m = new ASTModule("Test", List(miX, miY))
+        evaluating {
+            v.addMemberImplementations(Seq(m), Nil, nullDefs)
+        } should produce [ModuleMemberInitCycleError]
+    }
+
     ignore should "extend the mis in the definitions list and leave all existing values unchanged" in {}
 
     // ------------------------------------------------------------------------
