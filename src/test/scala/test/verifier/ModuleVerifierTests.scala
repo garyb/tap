@@ -671,7 +671,16 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
     // ------------------------------------------------------------------------
 
     behavior of "addMemberImplementations"
-    ignore should "throw an error if there are implementations missing for defined members" in {}
+
+    it should "throw an error if there are implementations missing for defined members" in {
+        val v = new ModuleVerifier(testScopes)
+        val mds = Seq("Test" -> new ASTDef("member", ASTQType(Nil, ASTTypeCon("X"))))
+        val defs = v.addMemberDefs(mds, testDefs)
+        evaluating {
+            v.addMemberImplementations(Nil, mds, defs)
+        } should produce [ModuleMissingImplementationError]
+    }
+
     ignore should "throw an error if multiple implemenations are provided for the same id"
     ignore should "throw an error if there is a cycle in initialising a group of members"
     ignore should "extend the mis in the definitions list and leave all existing values unchanged" in {}
