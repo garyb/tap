@@ -371,6 +371,12 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
 
             val mDeps = miMap mapValues { mi => TapNodeUtil.findImmediateDependencies(mi).toList } filter { case (id, deps) => deps.nonEmpty }
+
+            mDeps find { case (id, deps) => deps contains id } match {
+                case Some((id, _)) => throw ModuleMemberInitRecursiveError(id)
+                case None =>
+            }
+
             val extDeps = mDeps.values.flatten.toSet.filter { id => !(mDeps contains id) }
 
             val xss = Graph.components(mDeps ++ extDeps.map { _ -> Seq.empty })

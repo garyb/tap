@@ -690,6 +690,16 @@ class ModuleVerifierTests extends FlatSpec with GivenWhenThen {
         } should produce [ModuleDuplicateDefinition]
     }
 
+    it should "throw an error if a member refers to itself in initialisation" in {
+        val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
+                .addMember("memberX", ModuleId("Test", "memberX"))))
+        val mi = new ASTLet("memberX", ASTValueRead("memberX"))
+        val m = new ASTModule("Test", List(mi))
+        evaluating {
+            v.addMemberImplementations(Seq(m), Nil, nullDefs)
+        } should produce [ModuleMemberInitRecursiveError]
+    }
+
     it should "throw an error if there is a cycle in initialising a group of members" in {
         val v = new ModuleVerifier(Map("Test" -> testScopes("Test")
                 .addMember("memberX", ModuleId("Test", "memberX"))

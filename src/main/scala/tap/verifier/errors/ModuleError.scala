@@ -22,6 +22,9 @@ case class ExportModuleWithoutImportError(mId: String, modules: Iterable[String]
 case class ModuleMemberInitCycleError(ids: Seq[Id])
         extends VerifierError("Cycle found in member initialisation: " + (ids map prettyPrint mkString ", "))
 
+case class ModuleMemberInitRecursiveError(id: Id)
+        extends VerifierError("Recursion found in member initialisation: " + prettyPrint(id))
+
 case class ModuleMissingImplementationError(mId: String, missing: String, src: FilePositional)
         extends PositionedError("Module '" + mId + "' defines '" + missing + "' but provides no implementation", src)
 
