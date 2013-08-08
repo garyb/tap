@@ -70,7 +70,11 @@ class TypeInferenceTests extends FlatSpec {
         freshInstPartial(Nil, TGen(0, 0) fn TGen(0, 0)) should be === (TGen(0, 0) fn TGen(0, 0))
     }
 
-    ignore should "replace TGens in a Forall, first with the specified types, and after that with new type variables" in {}
+    it should "replace TGens in a Forall, first with the specified types, and after that with new type variables" in {
+        val result = freshInstPartial(List(tString), Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1)))
+        val lastVarName = "µ" + tvId
+        result should be === (tString fn TVar(lastVarName, Star))
+    }
 
     //-------------------------------------------------------------------------
 
