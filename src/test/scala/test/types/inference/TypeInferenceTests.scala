@@ -19,7 +19,11 @@ class TypeInferenceTests extends FlatSpec {
         freshInst(TGen(0, 0) fn TGen(0, 0)) should be === (TGen(0, 0) fn TGen(0, 0))
     }
 
-    ignore should "replace TGens in a Forall with new type variables" in {}
+    it should "replace TGens in a Forall with new type variables" in {
+        val result = freshInst(Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)))
+        val lastVarName = "µ" + tvId
+        result should be === (TVar(lastVarName, Star) fn TVar(lastVarName, Star))
+    }
 
     //-------------------------------------------------------------------------
 
