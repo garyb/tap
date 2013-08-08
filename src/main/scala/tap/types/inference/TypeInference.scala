@@ -40,6 +40,7 @@ object TypeInference {
 
     def freshInstPartial(ts0: List[Type], s: Qual[Type]): Qual[Type] = s match {
         case Qual(ps, sc @ Forall(_, ks, t)) =>
+            if (ts0.length > ks.length) throw TIInternalError("Too many parameters in freshInstPartial: " + (ts0 map prettyPrint mkString ", ") + " going into " + prettyPrint(sc))
             val ts1 = ks.drop(ts0.size) map newTVar
             Qual.inst(sc, ts0 ++ ts1, Qual(ps, t))
         case s => s
@@ -47,6 +48,7 @@ object TypeInference {
 
     def freshInstPartial(ts0: List[Type], s: Type): Type = s match {
         case sc @ Forall(_, ks, t) =>
+            if (ts0.length > ks.length) throw TIInternalError("Too many parameters in freshInstPartial: " + (ts0 map prettyPrint mkString ", ") + " going into " + prettyPrint(sc))
             val ts1 = ks.drop(ts0.size) map newTVar
             Type.inst(sc, ts0 ++ ts1, t)
         case s => s

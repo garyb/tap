@@ -9,6 +9,8 @@ import tap.types._
 import tap.types.kinds._
 import tap.types.classes.{IsIn, Qual}
 import tap.ModuleId
+import tap.verifier.errors.VerifierError
+import tap.types.inference.TIInternalError
 
 class TypeInferenceTests extends FlatSpec {
 
@@ -80,6 +82,12 @@ class TypeInferenceTests extends FlatSpec {
         val result = freshInstPartial(List(tString), Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1) fn TGen(1, 0)))
         val lastVarName = "µ" + tvId
         result should be === (tString fn TVar(lastVarName, Star) fn TGen(1, 0))
+    }
+
+    it should "throw an error if too many types are provided" in {
+        evaluating {
+            freshInstPartial(List(tString, tNumber), Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)))
+        } should produce [TIInternalError]
     }
 
     //-------------------------------------------------------------------------
