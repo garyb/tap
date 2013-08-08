@@ -2,11 +2,23 @@ package test.types.inference
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers._
+import tap.types.inference.TypeInference._
+
+import tap.types.Type._
+import tap.types._
+import tap.types.kinds._
 
 class TypeInferenceTests extends FlatSpec {
 
     behavior of "freshInst for Type"
-    ignore should "return the input if passed a non-Forall type" in {}
+
+    it should "return the input if passed a non-Forall type" in {
+        freshInst(tNumber) should be === tNumber
+        freshInst(tNumber fn tString) should be === (tNumber fn tString)
+        freshInst(TVar("a", Star) fn tString) should be === (TVar("a", Star) fn tString)
+        freshInst(TGen(0, 0) fn TGen(0, 0)) should be === (TGen(0, 0) fn TGen(0, 0))
+    }
+
     ignore should "replace TGens in a Forall with new type variables" in {}
 
     //-------------------------------------------------------------------------
