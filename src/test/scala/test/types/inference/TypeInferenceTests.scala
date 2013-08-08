@@ -132,7 +132,11 @@ class TypeInferenceTests extends FlatSpec {
         toQual(preds, t) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
     }
 
-    ignore should "omit any predicates from the Qual that are for type variables not appearing in the type" in {}
+    it should "omit any predicates from the Qual that are for type variables not appearing in the type" in {
+        val preds = List(IsIn(ModuleId("Test", "ClassX"), List(TVar("a", Star))), IsIn(ModuleId("Test", "ClassY"), List(TVar("b", Star))))
+        val t = TVar("b", Star) fn tString
+        toQual(preds, t) should be === Qual(List(IsIn(ModuleId("Test", "ClassY"), List(TVar("b", Star)))), TVar("b", Star) fn tString)
+    }
 
     //-------------------------------------------------------------------------
 
