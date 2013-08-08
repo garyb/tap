@@ -25,6 +25,12 @@ class TypeInferenceTests extends FlatSpec {
         result should be === (TVar(lastVarName, Star) fn TVar(lastVarName, Star))
     }
 
+    it should "only replace TGens belonging to the current Forall with new type variables" in {
+        val result = freshInst(Forall(0, List(Star), TGen(0, 0) fn TGen(1, 0)))
+        val lastVarName = "µ" + tvId
+        result should be === (TVar(lastVarName, Star) fn TGen(1, 0))
+    }
+
     //-------------------------------------------------------------------------
 
     behavior of "freshInst for Qual[Type]"
