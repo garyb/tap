@@ -116,6 +116,12 @@ class TypeInferenceTests extends FlatSpec {
         result should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(tString))), tString fn lastVar fn TGen(1, 0))
     }
 
+    it should "throw an error if too many types are provided" in {
+        evaluating {
+            freshInstPartial(List(tString, tNumber), Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0))))
+        } should produce [TIInternalError]
+    }
+
     //-------------------------------------------------------------------------
 
     behavior of "toQual"
