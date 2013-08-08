@@ -7,6 +7,8 @@ import tap.types.inference.TypeInference._
 import tap.types.Type._
 import tap.types._
 import tap.types.kinds._
+import tap.types.classes.{IsIn, Qual}
+import tap.ModuleId
 
 class TypeInferenceTests extends FlatSpec {
 
@@ -34,7 +36,17 @@ class TypeInferenceTests extends FlatSpec {
     //-------------------------------------------------------------------------
 
     behavior of "freshInst for Qual[Type]"
-    ignore should "return the input if passed a non-Forall type" in {}
+
+    it should "return the input if passed a non-Forall type" in {
+        freshInst(Qual(Nil, tNumber)) should be === Qual(Nil, tNumber)
+        freshInst(Qual(Nil, tNumber fn tString)) should be === Qual(Nil, tNumber fn tString)
+        freshInst(Qual(Nil, TVar("a", Star) fn tString)) should be === Qual(Nil, TVar("a", Star) fn tString)
+        freshInst(Qual(Nil, TGen(0, 0) fn TGen(0, 0))) should be === Qual(Nil, TGen(0, 0) fn TGen(0, 0))
+
+        freshInst(Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
+        freshInst(Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))
+    }
+
     ignore should "replace TGens in a Forall with new type variables, applying the same substitution to the predicates in the Qual" in {}
 
     //-------------------------------------------------------------------------
