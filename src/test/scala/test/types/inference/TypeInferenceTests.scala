@@ -125,7 +125,13 @@ class TypeInferenceTests extends FlatSpec {
     //-------------------------------------------------------------------------
 
     behavior of "toQual"
-    ignore should "construct a qualified type using the specified predicates and type" in {}
+
+    it should "construct a qualified type using the specified predicates and type" in {
+        val preds = List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star))))
+        val t = TVar("a", Star) fn tString
+        toQual(preds, t) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
+    }
+
     ignore should "omit any predicates from the Qual that are for type variables not appearing in the type" in {}
 
     //-------------------------------------------------------------------------
