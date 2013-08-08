@@ -62,7 +62,14 @@ class TypeInferenceTests extends FlatSpec {
     //-------------------------------------------------------------------------
 
     behavior of "freshInstPartial for Type"
-    ignore should "return the input if passed a non-Forall type" in {}
+
+    it should "return the input if passed a non-Forall type" in {
+        freshInstPartial(Nil, tNumber) should be === tNumber
+        freshInstPartial(Nil, tNumber fn tString) should be === (tNumber fn tString)
+        freshInstPartial(Nil, TVar("a", Star) fn tString) should be === (TVar("a", Star) fn tString)
+        freshInstPartial(Nil, TGen(0, 0) fn TGen(0, 0)) should be === (TGen(0, 0) fn TGen(0, 0))
+    }
+
     ignore should "replace TGens in a Forall, first with the specified types, and after that with new type variables" in {}
 
     //-------------------------------------------------------------------------
