@@ -34,15 +34,9 @@ object TypeInference {
     }
     var tvId = 0
 
-    def freshInst(s: Qual[Type]): Qual[Type] = s match {
-        case Qual(ps, sc @ Forall(_, ks, t)) => Qual.inst(sc, ks map newTVar, Qual(ps, t))
-        case s => s
-    }
+    def freshInst(s: Qual[Type]): Qual[Type] = freshInstPartial(Nil, s)
 
-    def freshInst(s: Type): Type = s match {
-        case sc @ Forall(_, ks, t) => Type.inst(sc, ks map newTVar, t)
-        case s => s
-    }
+    def freshInst(s: Type): Type = freshInstPartial(Nil, s)
 
     def freshInstPartial(ts0: List[Type], s: Qual[Type]): Qual[Type] = s match {
         case Qual(ps, sc @ Forall(_, ks, t)) =>
