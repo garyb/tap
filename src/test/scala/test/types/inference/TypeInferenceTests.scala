@@ -85,7 +85,17 @@ class TypeInferenceTests extends FlatSpec {
     //-------------------------------------------------------------------------
 
     behavior of "freshInstPartial for Qual[Type]"
-    ignore should "return the input if passed a non-Forall type" in {}
+
+    it should "return the input if passed a non-Forall type" in {
+        freshInstPartial(Nil, Qual(Nil, tNumber)) should be === Qual(Nil, tNumber)
+        freshInstPartial(Nil, Qual(Nil, tNumber fn tString)) should be === Qual(Nil, tNumber fn tString)
+        freshInstPartial(Nil, Qual(Nil, TVar("a", Star) fn tString)) should be === Qual(Nil, TVar("a", Star) fn tString)
+        freshInstPartial(Nil, Qual(Nil, TGen(0, 0) fn TGen(0, 0))) should be === Qual(Nil, TGen(0, 0) fn TGen(0, 0))
+
+        freshInstPartial(Nil, Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
+        freshInstPartial(Nil, Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))
+    }
+
     ignore should "replace TGens in a Forall, first with the specified types, and after that with new type variables, applying the same substitution to the predicates in the Qual" in {}
 
     //-------------------------------------------------------------------------
