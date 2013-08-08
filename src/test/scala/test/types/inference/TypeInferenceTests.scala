@@ -47,7 +47,11 @@ class TypeInferenceTests extends FlatSpec {
         freshInst(Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))) should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), TGen(0, 0) fn TGen(0, 0))
     }
 
-    ignore should "replace TGens in a Forall with new type variables, applying the same substitution to the predicates in the Qual" in {}
+    it should "replace TGens in a Forall with new type variables, applying the same substitution to the predicates in the Qual" in {
+        val result = freshInst(Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0))))
+        val lastVar = TVar("µ" + tvId, Star)
+        result should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(lastVar))), lastVar fn lastVar)
+    }
 
     //-------------------------------------------------------------------------
 
