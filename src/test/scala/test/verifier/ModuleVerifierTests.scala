@@ -3,7 +3,7 @@ package test.verifier
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ast._
-import tap.{LocalId, ModuleId}
+import tap.{LocalId, ModuleId, InstId}
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.ModuleVerifier
 import tap.verifier.errors._
@@ -14,6 +14,7 @@ import tap.types.classes.ClassEnvironments.Inst
 import tap.ir._
 import language.reflectiveCalls
 import test.TapNodeEquality
+import tap.util.trace
 
 class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
@@ -43,7 +44,75 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     // ------------------------------------------------------------------------
 
     behavior of "apply"
-    ignore should "extend the verifiedDefs with the definitions found in all the passed modules" in {}
+
+    it should "extend the verifiedDefs with the definitions found in all the passed modules" in {
+
+        val mA = ASTModule("ModuleA", List(
+            ASTDataType("TypeA", List("a"), List(
+                ASTDataCon("DataA2", List(ASTTypeVar("a"))),
+                ASTDataCon("DataA1", Nil))),
+            ASTClass("ClassA", Nil, List("a"), List(
+                ASTClassMemberDef("cmemberA", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))))),
+            ASTClassInst("ClassA", List(ASTClassRef("ClassA", List("a"))), List(ASTTypeApply(ASTTypeCon("TypeA"), List(ASTTypeVar("a")))), List(
+                ASTClassMemberImpl("cmemberA", ASTFunction(List("x"), ASTValueRead("x"))))),
+            ASTLet("memberA", ASTFunction(List("x"), ASTValueRead("x")))))
+
+        val mB = ASTModule("ModuleB", List(
+            ASTDataType("TypeB", Nil, List(
+                ASTDataCon("DataB", Nil))),
+            ASTClass("ClassB", Nil, List("a"), List(
+                ASTClassMemberDef("cmemberB", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a"))))))),
+            ASTClassInst("ClassB", Nil, List(ASTTypeCon("TypeB")), List(
+                ASTClassMemberImpl("cmemberB", ASTFunction(List("x"), ASTValueRead("x"))))),
+            ASTLet("memberB", ASTFunction(List("x"), ASTValueRead("x")))))
+
+        val v = new ModuleVerifier(Map(
+            "Test" -> testScopes("Test"),
+            "ModuleA" -> DefinitionsLookup.empty
+                    .addTCon("TypeA", ModuleId("ModuleA", "TypeA"))
+                    .addDCon("DataA1", ModuleId("ModuleA", "DataA1"))
+                    .addDCon("DataA2", ModuleId("ModuleA", "DataA2"))
+                    .addClass("ClassA", ModuleId("ModuleA", "ClassA"))
+                    .addMember("cmemberA", ModuleId("ModuleA", "cmemberA"))
+                    .addMember("memberA", ModuleId("ModuleA", "memberA")),
+            "ModuleB" -> DefinitionsLookup.empty
+                    .addTCon("TypeB", ModuleId("ModuleB", "TypeB"))
+                    .addDCon("DataB", ModuleId("ModuleB", "DataB"))
+                    .addClass("ClassB", ModuleId("ModuleB", "ClassB"))
+                    .addMember("cmemberB", ModuleId("ModuleB", "cmemberB"))
+                    .addMember("memberB", ModuleId("ModuleB", "memberB"))
+        ))
+
+        val defs = v.apply(Seq(mA, mB), testDefs)
+
+        defs.tcons should be === testDefs.tcons +
+                (ModuleId("ModuleA", "TypeA") -> TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star))) +
+                (ModuleId("ModuleB", "TypeB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
+        defs.dcons should be === testDefs.dcons +
+                (ModuleId("ModuleA", "DataA2") -> Forall(3, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(3, 0)), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(3, 0))))) +
+                (ModuleId("ModuleA", "DataA1") -> Forall(4, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(4, 0))), ModuleId("ModuleB", "DataB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
+        defs.tcs should be === testDefs.tcs +
+                (ModuleId("ModuleA", "ClassA") -> TypeclassDef(ModuleId("ModuleA", "ClassA"), List(), List(TVar("a", Star)), Set("cmemberA"), Set())) +
+                (ModuleId("ModuleB", "ClassB") -> TypeclassDef(ModuleId("ModuleB", "ClassB"), List(), List(TVar("a", Star)), Set("cmemberB"), Set()))
+        defs.tcis should be === testDefs.tcis +
+                (ModuleId("ModuleA", "ClassA") -> List(Inst("ModuleA", List(IsIn(ModuleId("ModuleA", "ClassA"), List(TVar("a", Star)))), IsIn(ModuleId("ModuleA", "ClassA"), List(TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TVar("a", Star))))))) +
+                (ModuleId("ModuleB", "ClassB") -> List(Inst("ModuleB", List(), IsIn(ModuleId("ModuleB", "ClassB"), List(TCon(ModuleId("ModuleB", "TypeB"), Star))))))
+        defs.mts should be === testDefs.mts +
+                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(5, 0)))), Forall(5, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(5, 0)), TGen(5, 0))))) +
+                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(6, 0)))), Forall(6, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(6, 0)), TGen(6, 0)))))
+
+        val testMis = testDefs.mis +
+                (ModuleId("ModuleA", "memberA") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
+                (InstId("ModuleA", ModuleId("ModuleA", "ClassA"), List(ModuleId("ModuleA", "TypeA")), "cmemberA") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
+                (ModuleId("ModuleB", "memberB") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
+                (InstId("ModuleB", ModuleId("ModuleB", "ClassB"), List(ModuleId("ModuleB", "TypeB")), "cmemberB") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x"))))
+
+        defs.mis.size should be === testMis.size
+        (defs.mis zip testMis) foreach { case ((k1, v1), (k2, v2)) =>
+            k1 should be === k2
+            v1 should equal(v2)
+        }
+    }
 
     // ------------------------------------------------------------------------
 
