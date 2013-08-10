@@ -268,9 +268,9 @@ object TypeInference {
     }
 
     /**
-     * Type-check a list of binding groups and accumulate assumptions while running through the list.
+     * Type-check a list of items and accumulate assumptions while running through the list.
      */
-    def tiSeq[BG](ti: Infer[BG], ce: ClassEnv, as: Assumps, ctx: Context, bs: List[BG]): (Assumps, Context, List[IsIn]) = bs match {
+    def tiSeq[E](ti: Infer[E], ce: ClassEnv, as: Assumps, ctx: Context, bs: List[E]): (Assumps, Context, List[IsIn]) = bs match {
         case List() => (as, ctx, Nil)
         case bs :: bss =>
             val (as1, ctx1, ps) = ti(ce, as, ctx, bs)

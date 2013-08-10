@@ -178,31 +178,34 @@ class TypeInferenceTests extends FlatSpec {
     //-------------------------------------------------------------------------
 
     behavior of "tiDef"
-    ignore should "do some things" in {}
+    ignore should "add a type inference constraint checking a definition against a type" in {}
 
     //-------------------------------------------------------------------------
 
     behavior of "tiExpl"
-    ignore should "do some things" in {}
+    ignore should "check the type of an explicitly typed definition" in {}
+    ignore should "throw an error if the explicit type signature is too general for the inferred type" in {}
+    ignore should "throw an error if there are inferred predicates missing from the explicit type" in {}
 
     //-------------------------------------------------------------------------
 
     behavior of "tiImpls"
-    ignore should "do some things" in {}
+    ignore should "infer the types of each item in a group of implicitly typed definitions" in {}
 
     //-------------------------------------------------------------------------
 
     behavior of "tiSeq"
-    ignore should "do some things" in {}
+    ignore should "sequentially run a type inference function on a list of items, accumulating the result" in {}
 
     //-------------------------------------------------------------------------
 
     behavior of "tiBindGroup"
-    ignore should "do some things" in {}
+    ignore should "type check every definition in a binding group" in {}
 
     //-------------------------------------------------------------------------
 
     behavior of "tiProgram"
-    ignore should "do some things" in {}
+    ignore should "type check every definition in a list of binding groups" in {}
+    ignore should "throw an error if an non-existant instance is required somewhere" in {}
 
  }
