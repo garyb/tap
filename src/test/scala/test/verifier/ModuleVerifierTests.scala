@@ -85,12 +85,18 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
         val defs = v.apply(Seq(mA, mB), testDefs)
 
+        val cmemberBFI = Type.lastForallId
+        val cmemberAFI = cmemberBFI - 1
+        val dataA1FI = cmemberAFI - 1
+        val dataA2FI = dataA1FI - 1
+
         defs.tcons should be === testDefs.tcons +
                 (ModuleId("ModuleA", "TypeA") -> TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star))) +
                 (ModuleId("ModuleB", "TypeB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.dcons should be === testDefs.dcons +
-                (ModuleId("ModuleA", "DataA2") -> Forall(3, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(3, 0)), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(3, 0))))) +
-                (ModuleId("ModuleA", "DataA1") -> Forall(4, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(4, 0))), ModuleId("ModuleB", "DataB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
+                (ModuleId("ModuleA", "DataA2") -> Forall(dataA2FI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(dataA2FI, 0)), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA2FI, 0))))) +
+                (ModuleId("ModuleA", "DataA1") -> Forall(dataA1FI, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA1FI, 0)))) +
+                (ModuleId("ModuleB", "DataB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.tcs should be === testDefs.tcs +
                 (ModuleId("ModuleA", "ClassA") -> TypeclassDef(ModuleId("ModuleA", "ClassA"), List(), List(TVar("a", Star)), Set("cmemberA"), Set())) +
                 (ModuleId("ModuleB", "ClassB") -> TypeclassDef(ModuleId("ModuleB", "ClassB"), List(), List(TVar("a", Star)), Set("cmemberB"), Set()))
@@ -98,8 +104,8 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                 (ModuleId("ModuleA", "ClassA") -> List(Inst("ModuleA", List(IsIn(ModuleId("ModuleA", "ClassA"), List(TVar("a", Star)))), IsIn(ModuleId("ModuleA", "ClassA"), List(TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TVar("a", Star))))))) +
                 (ModuleId("ModuleB", "ClassB") -> List(Inst("ModuleB", List(), IsIn(ModuleId("ModuleB", "ClassB"), List(TCon(ModuleId("ModuleB", "TypeB"), Star))))))
         defs.mts should be === testDefs.mts +
-                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(5, 0)))), Forall(5, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(5, 0)), TGen(5, 0))))) +
-                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(6, 0)))), Forall(6, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(6, 0)), TGen(6, 0)))))
+                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(cmemberAFI, 0)))), Forall(cmemberAFI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(cmemberAFI, 0)), TGen(cmemberAFI, 0))))) +
+                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(cmemberBFI, 0)))), Forall(cmemberBFI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(cmemberBFI, 0)), TGen(cmemberBFI, 0)))))
 
         val testMis = testDefs.mis +
                 (ModuleId("ModuleA", "memberA") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
