@@ -180,7 +180,18 @@ class TypeInferenceTests extends FlatSpec {
         t should be === tv
     }
 
-    ignore should "not replace inner forall TGens with type variables when inferring for ValueReadExprs" in {}
+    it should "not replace inner forall TGens with type variables when inferring for ValueReadExprs" in {
+        val ce = testCE
+        val tv = TVar("a", Star)
+        val qt = Qual(Nil, Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)) fn tv)
+        val as = testAs + (LocalId("testfn") -> qt)
+        val ctx0 = nullCtx
+        val expr = ValueReadExpr(LocalId("testfn"))
+        val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr, Nil)
+        ctx1 should be === ctx0.setNodeType(expr, qt)
+        ps should be === qt.ps
+        t should be === qt.h
+    }
 
     it should "build type inference constraints for CastExprs" in {
         val ce = testCE
