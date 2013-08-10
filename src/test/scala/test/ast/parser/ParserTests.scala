@@ -254,7 +254,7 @@ class ParserTests extends FlatSpec with ParserFixture {
                     ASTDef("identity", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
         parseModule("""
             (module Test)
-            (def print (=> (Show a) (-> a String)))
+            (def print (=> (Show a)) (-> a String))
         """) should be ===
                 ASTModule("Test", List(
                     ASTDef("print", ASTQType(List(ASTClassRef("Show", List("a"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeCon("String")))))))
@@ -290,7 +290,7 @@ class ParserTests extends FlatSpec with ParserFixture {
         parseModule("""
             (module Test)
             (class Ord (=> (Eq a)) (a)
-              (def nonsense (=> (Ord b) (-> a b Bool)))
+              (def nonsense (=> (Ord b)) (-> a b Bool))
               (def compare (-> a a Ordering))
               (let compare (lambda (x y) EQ)))
         """) should be ===
