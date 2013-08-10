@@ -146,7 +146,7 @@ object SExpressionParser extends RegexParsers {
         )
 
     val qualTypeRef = sourced( typeRef ^^ { case ttype => ASTQType(List.empty, ttype) }
-                             | "(" ~> "=>" ~> (typeclassRef+) ~ typeRef <~ ")" ^^ { case ctx ~ ttype => ASTQType(ctx, ttype) }
+                             | "(" ~> "=>" ~> (typeclassRef+) ~ ")" ~ typeRef ^^ { case ctx ~ _ ~ ttype => ASTQType(ctx, ttype) }
                              )
 
     //  [ special forms ]  --------------------------------------------------------------------------------------------
