@@ -9,7 +9,7 @@ import tap.types._
 import tap.types.kinds._
 import tap.types.classes.{ClassEnvironments, IsIn, Qual}
 import tap._
-import tap.types.inference.{Substitutions, TIInternalError}
+import tap.types.inference.{TIError, Substitutions, TIInternalError}
 import tap.ir._
 import tap.util.trace
 
@@ -181,6 +181,16 @@ class TypeInferenceTests extends FlatSpec {
                 .setNodeType(expr1, qt)
         ps should be === qt.ps
         t should be === qt.h
+    }
+
+    it should "throw an error if a CastExpr is invalid" in {
+        val ce = testCE
+        val as = testAs
+        val ctx0 = nullCtx
+        val expr = CastExpr(StringExpr("oh no"), tNumber)
+        evaluating {
+            tiExpr(ce, as, ctx0, expr, Nil)
+        } should produce [TIError]
     }
 
     it should "build type inference constraints for StringExprs" in {

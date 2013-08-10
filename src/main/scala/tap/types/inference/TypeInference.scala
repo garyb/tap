@@ -18,10 +18,7 @@ import language.reflectiveCalls
 object TypeInference {
 
     case class Context(s: Subst, ets: ExprTypeMap) {
-        def unify(x: Type, y: Type, src: FilePositional): Context = {
-            trace("UNIFY", x, y, src)
-            Context(Unify.unify(x, y, s, src), ets)
-        }
+        def unify(x: Type, y: Type, src: FilePositional): Context = Context(Unify.unify(x, y, s, src), ets)
         def setNodeType(n: TapNode, qt: Qual[Type]): Context = Context(s, ets + (n -> qt))
         def setNodeType(n: TapNode, t: Type): Context = setNodeType(n, Qual(Nil, t))
     }
