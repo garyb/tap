@@ -167,7 +167,18 @@ class TypeInferenceTests extends FlatSpec {
     }
 
     ignore should "build type inference constraints for CastExprs" in {}
-    ignore should "build type inference constraints for StringExprs" in {}
+
+    it should "build type inference constraints for StringExprs" in {
+        val ce = testCE
+        val as = testAs
+        val ctx0 = nullCtx
+        val expr = StringExpr("hwaet!")
+        val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr, Nil)
+        ctx1 should be === ctx0.setNodeType(expr, tString)
+        ps should be === Nil
+        t should be === tString
+    }
+
     ignore should "build type inference constraints for NumberExprs" in {}
     ignore should "build type inference constraints for FunctionExprs" in {}
     ignore should "build type inference constraints for FunctionExprs with no arguments" in {}
