@@ -98,7 +98,7 @@ object SExpressionParser extends RegexParsers {
     //  [ data types ]  -----------------------------------------------------------------------------------------------
 
     val dataType = sourced( "(" ~> "data" ~> typeIdent ~ (typeConstructor*) <~ ")" ^^ { case ident ~ constructors => ASTDataType(ident, List.empty, constructors) }
-                          | "(" ~> "data" ~> "(" ~> typeIdent ~ (ident+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataType(ident, params, constructors) }
+                          | "(" ~> "data" ~> "(" ~> typeIdent ~ (paramIdent+) ~ ")" ~ (typeConstructor*) <~ ")" ^^ { case ident ~ params ~ _ ~ constructors => ASTDataType(ident, params, constructors) }
                           )
 
     val typeConstructor = sourced( typeIdent ^^ { case ident => ASTDataCon(ident, List.empty) }
@@ -197,7 +197,7 @@ object SExpressionParser extends RegexParsers {
                          )
 
     val exports = sourced( "(" ~> "export" ~> "(" ~> "data" ~> typeIdent ~ "(" ~ (typeIdent*) <~ ")" <~ ")" <~ ")" ^^ { case tcon ~ _ ~ dcons => ASTDataTypeExport(tcon, dcons.toSet) }
-                         | "(" ~> "export" ~> "(" ~> "class" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTClassExport(ident) }
+                         | "(" ~> "export" ~> "(" ~> "class" ~> classIdent <~ ")" <~ ")" ^^ { case ident => ASTClassExport(ident) }
                          | "(" ~> "export" ~> "(" ~> "module" ~> moduleIdent <~ ")" <~ ")" ^^ { case ident => ASTModuleExport(ident) }
                          | "(" ~> "export" ~> ident <~ ")" ^^ { case ident => ASTMemberExport(ident) }
                          )
