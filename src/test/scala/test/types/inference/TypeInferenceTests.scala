@@ -7,12 +7,19 @@ import tap.types.inference.TypeInference._
 import tap.types.Type._
 import tap.types._
 import tap.types.kinds._
-import tap.types.classes.{IsIn, Qual}
-import tap.ModuleId
-import tap.verifier.errors.VerifierError
-import tap.types.inference.TIInternalError
+import tap.types.classes.{ClassEnvironments, IsIn, Qual}
+import tap._
+import tap.types.inference.{Substitutions, TIInternalError}
+import tap.ir._
+import tap.util.trace
 
 class TypeInferenceTests extends FlatSpec {
+
+    val testCE = ClassEnvironments.nullEnv
+    val testAs = Map.empty[Id, Qual[Type]]
+    val nullCtx = Context(Substitutions.nullSubst, Map.empty[TapNode, Qual[Type]])
+
+    //-------------------------------------------------------------------------
 
     behavior of "freshInst for Type"
 
@@ -145,7 +152,20 @@ class TypeInferenceTests extends FlatSpec {
     ignore should "build type inference constraints for ApplyExprs" in {}
     ignore should "build type inference constraints for MatchExprs" in {}
     ignore should "build type inference constraints for LetExprs" in {}
-    ignore should "build type inference constraints for ValueReadExprs" in {}
+
+    it should "build type inference constraints for ValueReadExprs" in {
+        val ce = testCE
+        val tv = TVar("a", Star)
+        val qt = Qual(List(IsIn(ModuleId("Data.Monoid", "Monoid"), List(tv))), tv)
+        val as = testAs + (LocalId("testval") -> qt)
+        val ctx0 = nullCtx
+        val expr = ValueReadExpr(LocalId("testval"))
+        val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr, Nil)
+        ctx1 should be === ctx0.setNodeType(expr, qt)
+        ps should be === qt.ps
+        t should be === qt.h
+    }
+
     ignore should "build type inference constraints for CastExprs" in {}
     ignore should "build type inference constraints for StringExprs" in {}
     ignore should "build type inference constraints for NumberExprs" in {}
