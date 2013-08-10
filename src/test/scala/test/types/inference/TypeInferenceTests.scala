@@ -166,7 +166,22 @@ class TypeInferenceTests extends FlatSpec {
         t should be === qt.h
     }
 
-    ignore should "build type inference constraints for CastExprs" in {}
+    it should "build type inference constraints for CastExprs" in {
+        val ce = testCE
+        val tv = TVar("a", Star)
+        val qt = Qual(List(IsIn(ModuleId("Data.Monoid", "Monoid"), List(tv))), tv)
+        val as = testAs + (LocalId("testval") -> qt)
+        val ctx0 = nullCtx
+        val expr0 = ValueReadExpr(LocalId("testval"))
+        val expr1 = CastExpr(expr0, tNumber)
+        val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr1, Nil)
+        ctx1 should be === ctx0
+                .unify(qt.h, tNumber, expr1)
+                .setNodeType(expr0, qt)
+                .setNodeType(expr1, qt)
+        ps should be === qt.ps
+        t should be === qt.h
+    }
 
     it should "build type inference constraints for StringExprs" in {
         val ce = testCE

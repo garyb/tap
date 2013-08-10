@@ -18,7 +18,10 @@ import language.reflectiveCalls
 object TypeInference {
 
     case class Context(s: Subst, ets: ExprTypeMap) {
-        def unify(x: Type, y: Type, src: FilePositional): Context = Context(Unify.unify(x, y, s, src), ets)
+        def unify(x: Type, y: Type, src: FilePositional): Context = {
+            trace("UNIFY", x, y, src)
+            Context(Unify.unify(x, y, s, src), ets)
+        }
         def setNodeType(n: TapNode, qt: Qual[Type]): Context = Context(s, ets + (n -> qt))
         def setNodeType(n: TapNode, t: Type): Context = setNodeType(n, Qual(Nil, t))
     }
@@ -111,8 +114,8 @@ object TypeInference {
 
         case CastExpr(e, ct) =>
             val (ctx1, ps, et) = tiExpr(ce, as, ctx, e, explArgs)
-            val ctx2 = ctx1.unify(et, ct, e)
-            (ctx2.setNodeType(node, Qual(ps, ct)), ps, ct)
+            val ctx2 = ctx1.unify(et, ct, node)
+            (ctx2.setNodeType(node, Qual(ps, et)), ps, et)
 
         case _: StringExpr => (ctx.setNodeType(node, tString), Nil, tString)
         case _: NumberExpr => (ctx.setNodeType(node, tNumber), Nil, tNumber)
