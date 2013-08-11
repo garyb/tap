@@ -306,8 +306,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, qtype))) =>
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
-            val qt = getMemberType(qId, qtype, defs)
-            result + (qId -> Qual.quantify(Qual.tv(qt), qt)._2)
+            result + (qId -> getMemberType(qId, qtype, defs))
         }
 
         defs.copy(mts = mts)
@@ -330,9 +329,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     }
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
-                    val qt0 = getMemberType(qId, qtype, defs)
-                    val qt1 = Qual(pred :: qt0.ps, qt0.h)
-                    result + (qId -> Qual.quantify(Qual.tv(qt1), qt1)._2)
+                    result + (qId -> getMemberType(qId, qtype, defs, Some(pred)))
                 case (result, _) => result
             }
         }
@@ -411,16 +408,22 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             IsIn(msntc, ps)
         }
 
-    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions): Qual[Type] = {
+    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions, classPred: Option[IsIn] = None): Qual[Type] = {
         val ASTQType(context, ttype) = qtype
         val ms = scopes(qId.mId)
         val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
         val km = KInfer.solve(ki, ttype)
         val tvNames = ASTUtil.findTypeVars(ttype, Set.empty)
         val tvs = (tvNames map { p => p -> TVar(p, KInfer(km, Kvar(qId, p))) }).toMap
-        val ps1 = getPredicates(ms.tcs, defs.tcs, context, tvs)
-        val (s, t) = ASTUtil.getTypeWithForallSubst(ms.tcons, defs.tcons, tvs, ttype)
-        Qual(ps1 map { p => Substitutions.applySubst(s, p) }, t)
+        val ps0 = getPredicates(ms.tcs, defs.tcs, context, tvs)
+        val ps1 = classPred match {
+            case Some(p) => p :: ps0
+            case None => ps0
+        }
+        val (s0, t0) = ASTUtil.getTypeWithForallSubst(ms.tcons, defs.tcons, tvs, ttype)
+        val (s1, t1) = Type.quantify(tvs.values.toList, t0)
+        val s2 = s0 ++ s1
+        Qual(ps1 map { p => Substitutions.applySubst(s2, p) }, t1)
     }
 
     def lookupInstanceParamType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {

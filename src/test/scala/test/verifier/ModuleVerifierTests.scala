@@ -894,11 +894,14 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "construct a qualified type from the AST for a type with predicates" in {
         val v = new ModuleVerifier(testScopes)
-        v.getMemberType(
+        val qt = v.getMemberType(
             ModuleId("Test", "a"),
             ASTQType(List(ASTClassRef("Y", List("a"))), ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))),
-            testDefs) should be ===
-        Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TVar("a", Star)))
+            testDefs)
+        val fi = Type.lastForallId
+        qt should be === Qual(List(
+            IsIn(ModuleId("Test", "Y"), List(TGen(fi, 0)))),
+            Forall(fi, List(Star), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TGen(fi, 0))))
     }
 
     it should "throw an error if type variables declared by forall have overlapping names" in {
