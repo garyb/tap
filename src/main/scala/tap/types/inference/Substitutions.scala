@@ -34,26 +34,6 @@ object Substitutions {
     def applySubst(s: Subst, qt: Qual[Type]): Qual[Type] = Qual(qt.ps map { applySubst(s, _) }, applySubst(s, qt.h))
 
     /**
-     * Finds the type variable used within a type.
-     */
-    def tv(t: Type): List[TVar] = t match {
-        case u: TVar => List(u)
-        case TAp(l, r) => (tv(l) ++ tv(r)).distinct
-        case Forall(_, _, t) => tv(t)
-        case t => List.empty
-    }
-
-    /**
-     * Finds the type variables used in a predicated type.
-     */
-    def tv(t: IsIn): List[TVar] = (t.ts flatMap { t => tv(t) }).distinct
-
-    /**
-     * Finds the type variables used within a qualified type.
-     */
-    def tv(qt: Qual[Type]): List[TVar] = ((qt.ps flatMap tv) ++ tv(qt.h)).distinct
-
-    /**
      * Composes two substitutions.
      */
     def composeSubst(s1: Subst, s2: Subst) =

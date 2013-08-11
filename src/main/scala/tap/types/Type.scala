@@ -97,10 +97,20 @@ object Type {
     def makeFunctionType(argTs: List[Type], rt: Type) = argTs.foldRight(rt) { _ fn _ }
 
     /**
+     * Finds the type variable used within a type.
+     */
+    def tv(t: Type): List[TVar] = t match {
+        case u: TVar => List(u)
+        case TAp(l, r) => (tv(l) ++ tv(r)).distinct
+        case Forall(_, _, t) => tv(t)
+        case t => List.empty
+    }
+
+    /**
      * Universally quantifies t using the specified type variables.
      */
     def quantify(vs: List[TVar], t: Type): Type = {
-        val vs1 = Substitutions.tv(t) collect { case v if vs contains v => v }
+        val vs1 = tv(t) collect { case v if vs contains v => v }
         if (vs1.isEmpty) t
         else {
             val ks = vs1 map Kind.kind

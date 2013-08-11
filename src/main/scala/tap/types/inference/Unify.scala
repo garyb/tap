@@ -16,7 +16,7 @@ object Unify {
      */
     def varBind(u: TVar, t: Type): Option[Subst] =
         if (t == u) Some(nullSubst)
-        else if (tv(t) contains u) None //throw TIError("occurs check fails: " + prettyPrint(t) + " contains " + u.id, src)
+        else if (Type.tv(t) contains u) None //throw TIError("occurs check fails: " + prettyPrint(t) + " contains " + u.id, src)
         else if (kind(u) != kind(t)) None //throw TIError("kinds do not match: " + prettyPrint(u) + " :: " + prettyPrint(kind(u)) + " and " + prettyPrint(t) + " :: " + prettyPrint(kind(t)), src)
         else Some(Map(u -> t))
 

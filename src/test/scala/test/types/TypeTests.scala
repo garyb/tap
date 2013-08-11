@@ -133,6 +133,38 @@ class TypeTests extends FlatSpec {
 
     //-------------------------------------------------------------------------
 
+    behavior of "tv"
+
+    it should "return a type variable" in {
+        val a = TVar("a", Star)
+        tv(a) should be === List(a)
+    }
+
+    it should "return all the type variables in a type application" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        tv(TAp(a, b)) should be === List(a, b)
+    }
+
+    it should "return all the unquantified type variables in a forall" in {
+        val a = TVar("a", Star)
+        tv(Forall(0, Nil, a)) should be === List(a)
+        tv(Forall(0, List(Star), TAp(a, TGen(0, 0)))) should be === List(a)
+    }
+
+    it should "return nothing for other types" in {
+        tv(TCon(ModuleId("Prelude", "String"), Star)) should be === Nil
+        tv(TGen(0, 0)) should be === Nil
+    }
+
+    it should "return a list of distinct type variables" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        tv(Forall(0, List(Star), TAp(a, b fn a fn TGen(0, 0) fn b))) should be === List(a, b)
+    }
+
+    //-------------------------------------------------------------------------
+
     behavior of "inst"
 
     it should "throw an error when the number of provided types does not match the number of TGens" in {

@@ -7,7 +7,7 @@ import tap.ir._
 import tap.types.Type._
 import tap.types.classes.ClassEnvironments.{ClassEnv, Inst}
 import tap.types.classes._
-import tap.types.inference.Substitutions.{Subst, tv}
+import tap.types.inference.Substitutions.Subst
 import tap.types.inference.TypeInference.ExprTypeMap
 import tap.types.inference.{TypeInference, Substitutions}
 import tap.util.{Graph, trace}
@@ -71,9 +71,9 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
      */
     def makeInstanceMemberType(sc: Qual[Type], tci: Inst): Qual[Type] = {
         val qt0 = TypeInference.freshInst(sc)
-        val subst = (tv(qt0) zip tci.tc.ts).toMap
+        val subst = (Qual.tv(qt0) zip tci.tc.ts).toMap
         val qt1 = Qual(tci.ps, Substitutions.applySubst(subst, qt0.h))
-        Qual.quantify(tv(qt1), qt1)
+        Qual.quantify(Qual.tv(qt1), qt1)
     }
 
     def buildClassEnv(defs: ModuleDefinitions): Map[String, ClassEnv] = {

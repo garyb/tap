@@ -13,6 +13,16 @@ import language.reflectiveCalls
 
 class IsInTests extends FlatSpec with GivenWhenThen {
 
+    behavior of "tv"
+
+    it should "return a list of distinct type variables from the types list" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        tv(IsIn(ModuleId("Test", "Test"), List(a, TAp(a, b)))) should be === List(a, b)
+    }
+
+    //-------------------------------------------------------------------------
+
     behavior of "inst"
 
     it should "throw an error When the number of provided types does not match the number of TGens" in {

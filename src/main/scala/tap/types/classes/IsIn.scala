@@ -11,6 +11,11 @@ case class IsIn(id: ModuleId, ts: List[Type])
 
 object IsIn {
 
+    /**
+     * Finds the type variables used in a predicated type.
+     */
+    def tv(t: IsIn): List[TVar] = (t.ts flatMap { t => Type.tv(t) }).distinct
+
     def inst(sc: Forall, ts: List[Type], p: IsIn): IsIn =
         IsIn(p.id, p.ts map { p => Type.inst(sc, ts, p) })
 

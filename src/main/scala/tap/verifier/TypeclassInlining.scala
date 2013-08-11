@@ -10,7 +10,7 @@ import tap.types.kinds.Kind._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{TypeclassDef, Qual, IsIn}
 import tap.types.inference.TypeInference.{freshInst, freshInstPartial}
-import tap.types.inference.Substitutions.{applySubst, Subst, tv}
+import tap.types.inference.Substitutions.{applySubst, Subst}
 import tap.types.inference.Substitutions
 import tap.util._
 import tap.util.ContextOps._
@@ -203,7 +203,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                     val sc = mts(ModuleId(mId, m))
                     if (sc.ps(0).id != msn) throw new Error("Typeclass member incorrect predicate found - " + m + " :: " + prettyPrint(sc))
                     val qt = freshInstPartial(vs, sc)
-                    val tvs = tv(qt) filterNot { tv => vs contains tv }
+                    val tvs = Qual.tv(qt) filterNot { tv => vs contains tv }
                     if (tvs.nonEmpty) Qual.quantify(tvs, qt).h else qt.h
                 }
 
@@ -681,7 +681,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
         case Qual(Seq(), t) => Nil
         case Qual(ps, t) =>
 
-            val psSat = ps filter { p => tv(p).isEmpty }
+            val psSat = ps filter { p => IsIn.tv(p).isEmpty }
             if (psSat.nonEmpty) {
                 // This is a problem because it makes it impossible to decide which argument satisfies the predicate
                 // e.g. if a function comes in as (SomeTC String) => String -> String -> String there is nothing to say
@@ -694,11 +694,11 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
             def transform(t: Type, ps: List[IsIn], tvs: Set[TVar]): List[List[IsIn]] = t match {
                 case TAp(TAp(f, a), b) if f == tArrow =>
                     val tvs1 = tvs ++ tv(a)
-                    val psSat = ps filter { p => tv(p) forall { tv => tvs1 contains tv } }
+                    val psSat = ps filter { p => IsIn.tv(p) forall { tv => tvs1 contains tv } }
                     psSat :: transform(b, ps filter { p => !(psSat contains p) }, tvs1)
                 case a =>
                     val tva = tv(a)
-                    List(ps filter { p => tv(p) forall { tv => tva contains tv } })
+                    List(ps filter { p => IsIn.tv(p) forall { tv => tva contains tv } })
             }
 
             transform(t, ps, Set.empty) map2 { p => applySubst(s, p) }

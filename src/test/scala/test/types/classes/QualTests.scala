@@ -11,6 +11,17 @@ import language.reflectiveCalls
 
 class QualTests extends FlatSpec {
 
+    behavior of "tv"
+
+    it should "return a list of distinct type variables from the predicates list and type" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        val c = TVar("c", Star)
+        Qual.tv(Qual(List(IsIn(ModuleId("Test", "Test"), List(a, TAp(a, b)))), c fn c)) should be === List(a, b, c)
+    }
+
+    //-------------------------------------------------------------------------
+
     behavior of "inst"
 
     it should "throw an error when the number of provided types does not match the number of TGens" in {

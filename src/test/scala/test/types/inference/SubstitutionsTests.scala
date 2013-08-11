@@ -69,55 +69,6 @@ class SubstitutionsTests extends FlatSpec {
 
     //-------------------------------------------------------------------------
 
-    behavior of "tv for Type"
-
-    it should "return a type variable" in {
-        val a = TVar("a", Star)
-        tv(a) should be === List(a)
-    }
-
-    it should "return all the type variables in a type application" in {
-        val a = TVar("a", Star)
-        val b = TVar("b", Star)
-        tv(TAp(a, b)) should be === List(a, b)
-    }
-
-    it should "return all the unquantified type variables in a forall" in {
-        val a = TVar("a", Star)
-        tv(Forall(0, Nil, a)) should be === List(a)
-        tv(Forall(0, List(Star), TAp(a, TGen(0, 0)))) should be === List(a)
-    }
-
-    it should "return nothing for other types" in {
-        tv(TCon(ModuleId("Prelude", "String"), Star)) should be === Nil
-        tv(TGen(0, 0)) should be === Nil
-    }
-
-    it should "return a list of distinct type variables" in {
-        val a = TVar("a", Star)
-        val b = TVar("b", Star)
-        tv(Forall(0, List(Star), TAp(a, b fn a fn TGen(0, 0) fn b))) should be === List(a, b)
-    }
-
-    //-------------------------------------------------------------------------
-
-    "tv for IsIn" should "return a list of distinct type variables from the types list" in {
-        val a = TVar("a", Star)
-        val b = TVar("b", Star)
-        tv(IsIn(ModuleId("Test", "Test"), List(a, TAp(a, b)))) should be === List(a, b)
-    }
-
-    //-------------------------------------------------------------------------
-
-    "tv for Qual[Type]" should "return a list of distinct type variables from the predicates list and type" in {
-        val a = TVar("a", Star)
-        val b = TVar("b", Star)
-        val c = TVar("c", Star)
-        tv(Qual(List(IsIn(ModuleId("Test", "Test"), List(a, TAp(a, b)))), c fn c)) should be === List(a, b, c)
-    }
-
-    //-------------------------------------------------------------------------
-
     "@@" should "compose substitutions" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)

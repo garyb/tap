@@ -122,7 +122,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     }
                     val did = ModuleId(id.mId, dcon.name)
                     if (dcons contains did) throw ModuleDuplicateDefinition(id.mId, "data constructor", dcon.name, dtd)
-                    dcons + (did -> Type.quantify(Substitutions.tv(at), at))
+                    dcons + (did -> Type.quantify(Type.tv(at), at))
                 }
             }
 
@@ -271,7 +271,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     t
             }
 
-            val tvs = (ps flatMap { p => Substitutions.tv(p) } map { tv => tv.id -> tv }).toMap
+            val tvs = (ps flatMap { p => Type.tv(p) } map { tv => tv.id -> tv }).toMap
 
             val preds = getPredicates(tcIds, defs.tcs, context, tvs)
 
@@ -307,7 +307,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
             val qt = getMemberType(qId, qtype, defs)
-            result + (qId -> Qual.quantify(Substitutions.tv(qt), qt))
+            result + (qId -> Qual.quantify(Qual.tv(qt), qt))
         }
 
         defs.copy(mts = mts)
@@ -332,7 +332,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
                     val qt0 = getMemberType(qId, qtype, defs)
                     val qt1 = Qual(pred :: qt0.ps, qt0.h)
-                    result + (qId -> Qual.quantify(Substitutions.tv(qt1), qt1))
+                    result + (qId -> Qual.quantify(Qual.tv(qt1), qt1))
                 case (result, _) => result
             }
         }
