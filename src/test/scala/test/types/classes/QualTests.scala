@@ -70,13 +70,13 @@ class QualTests extends FlatSpec {
 
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
-        quantify(List.empty, Qual(Nil, a fn a)) should be === Qual(Nil, a fn a)
+        quantify(List.empty, Qual(Nil, a fn a))._2 should be === Qual(Nil, a fn a)
     }
 
     it should "only quantify type variables in the provided list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), Qual(Nil, a fn (b fn a)))
+        val sc = quantify(List(a), Qual(Nil, a fn (b fn a)))._2
         val fi = Type.lastForallId
         sc should be === Qual(Nil, Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0))))
     }
@@ -84,7 +84,7 @@ class QualTests extends FlatSpec {
     it should "quantify type variables in the predicates list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), Qual(List(IsIn(ModuleId("Test", "TC"), List(a))), a fn (b fn a)))
+        val sc = quantify(List(a), Qual(List(IsIn(ModuleId("Test", "TC"), List(a))), a fn (b fn a)))._2
         val fi = Type.lastForallId
         sc should be === Qual(List(IsIn(ModuleId("Test", "TC"), List(TGen(fi, 0)))), Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0))))
     }

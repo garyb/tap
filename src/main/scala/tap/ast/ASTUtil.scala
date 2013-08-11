@@ -6,6 +6,9 @@ import tap.types.Type._
 import tap.types._
 import tap.verifier.errors._
 import tap.types.kinds.{Kind, Kvar, KInfer}
+import tap.types.classes.{IsIn, Qual}
+import tap.types.inference.Substitutions.{nullSubst, Subst}
+import tap.util.ContextOps.withContext
 
 /**
  * Useful operations on AST nodes.
@@ -60,26 +63,37 @@ object ASTUtil {
     /**
      * Converts an ASTType into a Type.
      */
-    def getType(lookup: Map[String, ModuleId], tcons: Map[ModuleId, TCon], tvs: Map[String, TVar], ast: ASTType): Type = ast match {
-        case ASTTypeCon(id) => tcons.getOrElse(lookup(id), throw UnknownTypeConstructorError(id, ast))
-        case ASTTypeVar(id) => tvs.getOrElse(id, throw UnknownTypeVariableError(id, ast))
+    def getType(lookup: Map[String, ModuleId], tcons: Map[ModuleId, TCon], tvs: Map[String, TVar], ast: ASTType): Type =
+        getTypeWithForallSubst(lookup, tcons, tvs, ast)._2
+
+    def getTypeWithForallSubst(lookup: Map[String, ModuleId], tcons: Map[ModuleId, TCon], tvs: Map[String, TVar], ast: ASTType): (Subst, Type) = ast match {
+        case ASTTypeCon(id) => (nullSubst, tcons.getOrElse(lookup(id), throw UnknownTypeConstructorError(id, ast)))
+        case ASTTypeVar(id) => (nullSubst, tvs.getOrElse(id, throw UnknownTypeVariableError(id, ast)))
         case ASTTypeApply(ttype, params) =>
-            val t = getType(lookup, tcons, tvs, ttype)
+            val (s, t) = getTypeWithForallSubst(lookup, tcons, tvs, ttype)
             val k = Kind.kind(t)
             val arity = Kind.arity(k)
             if (arity == 0) throw new TypeConstructorNoArgsError(t, ast)
             else if (params.length > arity) throw new TypeConstructorTooManyArgsError(t, ast)
-            params.foldLeft(t) { (t,p) => TAp(t, getType(lookup, tcons, tvs, p)) }
-        case ASTFunctionType(List(p)) => makeFunctionType(List(tUnit, getType(lookup, tcons, tvs, p)))
-        case ASTFunctionType(params) => makeFunctionType(params map { ast => getType(lookup, tcons, tvs, ast) })
+            params.foldLeft((s, t)) { case ((s0, t), p) =>
+                val (s1, t1) = getTypeWithForallSubst(lookup, tcons, tvs, p)
+                (s1, TAp(t, t1))
+            }
+        case ASTFunctionType(List(p)) =>
+            val (s, t) = getTypeWithForallSubst(lookup, tcons, tvs, p)
+            (s, makeFunctionType(List(tUnit, t)))
+        case ASTFunctionType(params) =>
+            val (s, ts) = withContext(nullSubst).map(params) { (s, ast) => getTypeWithForallSubst(lookup, tcons, tvs, ast) }
+            (s, makeFunctionType(ts))
         case ASTForall(ids, t) =>
             if (ids.distinct != ids) throw new Error("forall contains duplicate type variable declaration")
             val msn = LocalId("forall")
             val ki = KInfer.constrain(lookup, tcons, msn, List(msn), List(t))
             val km = KInfer.solve(ki, ast)
             val ttvs = (ids map { p => p -> TVar(p, KInfer(km, Kvar(msn, p))) }).toMap
-            val tt = getType(lookup, tcons, tvs ++ ttvs, t)
-            quantify(ttvs.values.toList, tt)
+            val (s0, tt) = getTypeWithForallSubst(lookup, tcons, tvs ++ ttvs, t)
+            val (s1, sc) = quantify(ttvs.values.toList, tt)
+            (s0 ++ s1, sc)
     }
 
     /**

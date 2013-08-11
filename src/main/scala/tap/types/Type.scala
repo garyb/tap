@@ -4,6 +4,7 @@ import tap.ModuleId
 import tap.types.kinds.{Kind, Kfun, Star}
 import scala.annotation.tailrec
 import tap.types.inference.Substitutions
+import tap.types.inference.Substitutions.{nullSubst, Subst}
 import tap.util.PrettyPrint._
 import language.implicitConversions
 import language.reflectiveCalls
@@ -37,8 +38,8 @@ object Type {
     val tBool: Type   = TCon(id("Bool"), Star)
     val tUnit: Type   = TCon(id("Unit"), Star)
     val tList: Type   = TCon(id("List"), Kfun(Star, Star))
-    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(id("Var"), Kfun(Star, Star)), TVar("a", Star)))
-    val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))
+    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(id("Var"), Kfun(Star, Star)), TVar("a", Star)))._2
+    val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))._2
 
     /**
      * Finds the ID of a type constructor in the specified type. This should only be called when it is known the type
@@ -109,14 +110,14 @@ object Type {
     /**
      * Universally quantifies t using the specified type variables.
      */
-    def quantify(vs: List[TVar], t: Type): Type = {
+    def quantify(vs: List[TVar], t: Type): (Subst, Type) = {
         val vs1 = tv(t) collect { case v if vs contains v => v }
-        if (vs1.isEmpty) t
+        if (vs1.isEmpty) (nullSubst, t)
         else {
             val ks = vs1 map Kind.kind
             val fi = newForallId()
             val s = (vs1 zip (List.range(0, vs1.size) map { n => TGen(fi, n) })).toMap
-            Forall(fi, ks, Substitutions.applySubst(s, t))
+            (s, Forall(fi, ks, Substitutions.applySubst(s, t)))
         }
     }
 

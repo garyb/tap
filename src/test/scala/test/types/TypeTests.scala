@@ -6,6 +6,7 @@ import tap.ModuleId
 import tap.types._
 import tap.types.Type._
 import tap.types.kinds._
+import tap.types.inference.Substitutions.nullSubst
 import java.lang.IllegalArgumentException
 import language.reflectiveCalls
 
@@ -120,13 +121,13 @@ class TypeTests extends FlatSpec {
 
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
-        quantify(List.empty, a fn a) should be === (a fn a)
+        quantify(List.empty, a fn a) should be === (nullSubst, a fn a)
     }
 
     it should "only quantify type variables in the provided list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), a fn (b fn a))
+        val sc = quantify(List(a), a fn (b fn a))._2
         val fi = lastForallId
         sc should be === Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0)))
     }

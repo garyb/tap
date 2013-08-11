@@ -122,7 +122,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     }
                     val did = ModuleId(id.mId, dcon.name)
                     if (dcons contains did) throw ModuleDuplicateDefinition(id.mId, "data constructor", dcon.name, dtd)
-                    dcons + (did -> Type.quantify(Type.tv(at), at))
+                    dcons + (did -> Type.quantify(Type.tv(at), at)._2)
                 }
             }
 
@@ -307,7 +307,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
             val qt = getMemberType(qId, qtype, defs)
-            result + (qId -> Qual.quantify(Qual.tv(qt), qt))
+            result + (qId -> Qual.quantify(Qual.tv(qt), qt)._2)
         }
 
         defs.copy(mts = mts)
@@ -332,7 +332,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
                     val qt0 = getMemberType(qId, qtype, defs)
                     val qt1 = Qual(pred :: qt0.ps, qt0.h)
-                    result + (qId -> Qual.quantify(Qual.tv(qt1), qt1))
+                    result + (qId -> Qual.quantify(Qual.tv(qt1), qt1)._2)
                 case (result, _) => result
             }
         }
@@ -419,7 +419,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         val tvNames = ASTUtil.findTypeVars(ttype, Set.empty)
         val tvs = (tvNames map { p => p -> TVar(p, KInfer(km, Kvar(qId, p))) }).toMap
         val ps1 = getPredicates(ms.tcs, defs.tcs, context, tvs)
-        Qual(ps1, ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype))
+        val (s, t) = ASTUtil.getTypeWithForallSubst(ms.tcons, defs.tcons, tvs, ttype)
+        Qual(ps1 map { p => Substitutions.applySubst(s, p) }, t)
     }
 
     def lookupInstanceParamType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {

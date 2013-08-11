@@ -204,7 +204,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                     if (sc.ps(0).id != msn) throw new Error("Typeclass member incorrect predicate found - " + m + " :: " + prettyPrint(sc))
                     val qt = freshInstPartial(vs, sc)
                     val tvs = Qual.tv(qt) filterNot { tv => vs contains tv }
-                    if (tvs.nonEmpty) Qual.quantify(tvs, qt).h else qt.h
+                    if (tvs.nonEmpty) Qual.quantify(tvs, qt)._2.h else qt.h
                 }
 
                 // Build the type constructor for the typeclass
@@ -220,11 +220,11 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 val sc = Type.quantify(tv(dcon), dcon)
                 trace(prettyPrint(msn))
                 trace("-", prettyPrint(tcon))
-                trace("-", prettyPrint(Qual.quantify(tv(t), Qual(Nil, t))))
+                trace("-", prettyPrint(Qual.quantify(tv(t), Qual(Nil, t))._2))
                 trace("-", prettyPrint(dcon))
-                trace("-", prettyPrint(sc))
+                trace("-", prettyPrint(sc._2))
 
-                loop(xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc)))
+                loop(xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc._2)))
         }
 
         // Loop through the typeclasses in dependency order

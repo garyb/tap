@@ -235,8 +235,8 @@ object TypeInference {
             val fs = (as.values.toList flatMap { a => Qual.tv(applySubst(ctx1.s, a)) }).distinct
             val gs = tv(t1) diff fs
             val sc1 = sc.h match {
-                case Forall(fi, _, _) => Qual.quantify(gs, Qual(qs1, t1), Some(fi))
-                case _ => Qual.quantify(gs, Qual(qs1, t1))
+                case Forall(fi, _, _) => Qual.quantify(gs, Qual(qs1, t1), Some(fi))._2
+                case _ => Qual.quantify(gs, Qual(qs1, t1))._2
             }
             val ps0 = ps map { applySubst(ctx1.s, _) }
             val ps1 = ps0 filter { case p => !entail(ce, qs1, p) }
@@ -262,7 +262,7 @@ object TypeInference {
         val vss = ts1 map tv
         val gs = vss.foldLeft(List.empty[TVar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) } diff fs
         val (ds, rs) = split(ce, fs, ps1)
-        val scs1 = ts1 map { t => Qual.quantify(gs, Qual(rs, t)) }
+        val scs1 = ts1 map { t => Qual.quantify(gs, Qual(rs, t))._2 }
         val ctx2 = ctx1.foreach(es zip ts1) { case (ctx, (e, t)) => ctx.setNodeType(e, Qual(rs, t)) }
         (as ++ (is zip scs1), ctx2, ds)
     }

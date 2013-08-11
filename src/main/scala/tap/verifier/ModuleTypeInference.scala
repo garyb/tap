@@ -73,7 +73,7 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
         val qt0 = TypeInference.freshInst(sc)
         val subst = (Qual.tv(qt0) zip tci.tc.ts).toMap
         val qt1 = Qual(tci.ps, Substitutions.applySubst(subst, qt0.h))
-        Qual.quantify(Qual.tv(qt1), qt1)
+        Qual.quantify(Qual.tv(qt1), qt1)._2
     }
 
     def buildClassEnv(defs: ModuleDefinitions): Map[String, ClassEnv] = {
