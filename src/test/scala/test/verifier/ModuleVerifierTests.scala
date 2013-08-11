@@ -892,6 +892,15 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         Qual(Nil, TCon(ModuleId("Test", "X"), Star))
     }
 
+    it should "construct a qualified type from the AST for a type with predicates" in {
+        val v = new ModuleVerifier(testScopes)
+        v.getMemberType(
+            ModuleId("Test", "a"),
+            ASTQType(List(ASTClassRef("Y", List("a"))), ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))),
+            testDefs) should be ===
+        Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TVar("a", Star)))
+    }
+
     // ------------------------------------------------------------------------
 
     behavior of "lookupInstanceParamType"
