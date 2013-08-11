@@ -4,6 +4,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ModuleId
 import tap.types._
+import tap.types.inference.Substitutions.nullSubst
 import tap.types.classes.Qual._
 import tap.types.classes.{IsIn, Qual}
 import tap.types.kinds.Star
@@ -71,6 +72,14 @@ class QualTests extends FlatSpec {
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
         quantify(List.empty, Qual(Nil, a fn a))._2 should be === Qual(Nil, a fn a)
+    }
+
+    it should "return substitutions for the variables replaced with TGens" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        val s = quantify(List(a), Qual(Nil, a fn (b fn a)))._1
+        val fi = Type.lastForallId
+        s should be === nullSubst + (a -> TGen(fi, 0))
     }
 
     it should "only quantify type variables in the provided list" in {
