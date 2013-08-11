@@ -124,6 +124,14 @@ class TypeTests extends FlatSpec {
         quantify(List.empty, a fn a) should be === (nullSubst, a fn a)
     }
 
+    it should "return substitutions for the variables replaced with TGens" in {
+        val a = TVar("a", Star)
+        val b = TVar("b", Star)
+        val s = quantify(List(a), a fn (b fn a))._1
+        val fi = lastForallId
+        s should be === nullSubst + (a -> TGen(fi, 0))
+    }
+
     it should "only quantify type variables in the provided list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
