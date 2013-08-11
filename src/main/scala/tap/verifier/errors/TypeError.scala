@@ -20,6 +20,9 @@ case class KindMismatchError(id: String, required: Kind, actual: Kind, src: File
 case class KindConflictError(x: Kind, y: Kind, src: FilePositional)
         extends PositionedError("Conflicting kinds: '" + prettyPrint(x) + "' and '" + prettyPrint(y) + "'", src)
 
+case class TypeVariableOverlapError(tvName: String, src: FilePositional)
+        extends PositionedError("Type variable name '" + tvName + "' is declared more than once", src)
+
 // ---[ type constructor arity ]-----------------------------------------------
 
 case class TypeConstructorNoArgsError(t: Type, src: FilePositional)

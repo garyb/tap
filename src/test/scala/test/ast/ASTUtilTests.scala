@@ -8,7 +8,7 @@ import tap.ast._
 import tap.types.Type._
 import tap.types._
 import tap.types.kinds._
-import tap.verifier.errors.{TypeConstructorNoArgsError, TypeConstructorTooManyArgsError, UnknownTypeVariableError, UnknownTypeConstructorError}
+import tap.verifier.errors._
 import language.reflectiveCalls
 
 class ASTUtilTests extends FlatSpec with GivenWhenThen {
@@ -135,9 +135,15 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
                 Set("a", "b", "c")
     }
 
-    it should "extract the non-quantified type var names from an ASTForall" in {
+    it should "throw an error if type variables appearing in a forall overlap with the current result" in {
+        evaluating {
+            findTypeVars(ASTForall(List("a"), ASTTypeVar("a")), Set("a"))
+        } should produce [TypeVariableOverlapError]
+    }
+
+    it should "extract the names from an ASTForall" in {
         findTypeVars(ASTForall(List("a"), ASTTypeVar("b"))) should be ===
-                Set("b")
+                Set("a", "b")
     }
 
     // ————————————————————————————————————————————————————————————————————————

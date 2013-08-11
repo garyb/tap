@@ -50,7 +50,11 @@ object ASTUtil {
         case ASTTypeVar(i) => result + i
         case ASTTypeApply(t, ps) => (t :: ps).foldRight(result)(findTypeVars)
         case ASTFunctionType(ps) => ps.foldRight(result)(findTypeVars)
-        case ASTForall(ts, t) => result ++ (findTypeVars(t) filterNot { t => ts contains t })
+        case ASTForall(ts, t) =>
+            ts find { t => result contains t } match {
+                case Some(t) => throw TypeVariableOverlapError(t, ast)
+                case None => result ++ ts ++ findTypeVars(t)
+            }
     }
 
     /**
