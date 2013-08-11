@@ -921,6 +921,17 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         } should produce [TypeVariableOverlapError]
     }
 
+    it should "allow qualification of variables that appear in an inner forall" in {
+        val v = new ModuleVerifier(testScopes)
+        val qt = v.getMemberType(
+            ModuleId("Test", "a"),
+            ASTQType(List(ASTClassRef("Y", List("a"))), ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("X")))),
+            testDefs)
+        val fi = Type.lastForallId
+        qt should be === Qual(List(IsIn(ModuleId("Test", "Y"), List(TGen(fi, 0)))),
+            Forall(fi, List(Star), TGen(fi, 0) fn TGen(fi, 0)) fn TCon(ModuleId("Test", "X"), Star))
+    }
+
     // ------------------------------------------------------------------------
 
     behavior of "lookupInstanceParamType"
