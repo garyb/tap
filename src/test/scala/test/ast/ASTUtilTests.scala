@@ -158,7 +158,7 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
         val tcons = Map(
             ModuleId("Test", "TestA") -> TCon(ModuleId("Test", "TestA"), Star)
         )
-        getType(lookup, tcons, Map.empty, ASTTypeCon("TestA")) should be ===
+        getType(lookup, tcons, Map.empty, ASTTypeCon("TestA"))._2 should be ===
                 TCon(ModuleId("Test", "TestA"), Star)
     }
 
@@ -176,7 +176,7 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "a" -> TVar("a", Star),
             "b" -> TVar("b", Star)
         )
-        getType(Map.empty, Map.empty, tvs, ASTTypeVar("b")) should be ===
+        getType(Map.empty, Map.empty, tvs, ASTTypeVar("b"))._2 should be ===
             tvs("b")
     }
 
@@ -189,14 +189,14 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "a" -> TVar("a", Kfun(Star, Kfun(Star, Star))),
             "b" -> TVar("b", Star)
         )
-        getType(Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b")))) should be ===
+        getType(Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b"))))._2 should be ===
                 TAp(TAp(tvs("a"), tvs("b")), tvs("b"))
     }
 
     it should "return function types without arguments" in {
         val tvs = Map("a" -> TVar("a", Star))
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a")))) should be ===
+        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"))))._2 should be ===
                 TAp(TAp(tArrow, tUnit), tvs("a"))
     }
 
@@ -207,22 +207,22 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "c" -> TVar("c", Star)
         )
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b")))) should be ===
+        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"))))._2 should be ===
                 TAp(TAp(tArrow, tvs("a")), tvs("b"))
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("c")))) should be ===
+        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("c"))))._2 should be ===
                 TAp(TAp(tArrow, tvs("a")), TAp(TAp(tArrow, tvs("b")), tvs("c")))
     }
 
     it should "return Foralls as needed" in {
         val lookup = Map("String" -> ModuleId("Prelude", "String"))
         val tcons = Map(ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star))
-        val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))
+        val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._2
         t1 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn TGen(lastForallId, 0)) fn tString)
 
         When("quantified variables already exist in the tvs list, they should be hidden inside the forall")
         val tvs = Map("a" -> TVar("a", Star), "b" -> TVar("b", Star))
-        val t2 = getType(lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))
+        val t2 = getType(lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))._2
         t2 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn (tvs("b") fn TGen(lastForallId, 0))) fn tvs("a"))
     }
 
@@ -244,4 +244,8 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("String"), List(ASTTypeCon("String"))))
         } should produce [TypeConstructorNoArgsError]
     }
+
+    ignore should "return substitutions for type variables replaced with TGens in a Forall" in {}
+    ignore should "return substitutions for type variables replaced with TGens in a Forall inside a ASTTypeApply" in {}
+    ignore should "return substitutions for type variables replaced with TGens in a Forall inside a ASTFunctionType" in {}
 }

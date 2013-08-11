@@ -118,7 +118,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                 dtd.constructors.foldLeft(dcs) { case (dcons, dcon) =>
                     val at = dcon.args match {
                         case Seq() => dts(id)
-                        case as => as.map { a => ASTUtil.getType(scopes(id.mId).tcons, tcons1, dtenvs(id), a) }.foldRight(dts(id): Type) { (x, y) => x fn y }
+                        case as => as.map { a => ASTUtil.getType(scopes(id.mId).tcons, tcons1, dtenvs(id), a)._2 }.foldRight(dts(id): Type) { (x, y) => x fn y }
                     }
                     val did = ModuleId(id.mId, dcon.name)
                     if (dcons contains did) throw ModuleDuplicateDefinition(id.mId, "data constructor", dcon.name, dtd)
@@ -420,7 +420,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             case Some(p) => p :: ps0
             case None => ps0
         }
-        val (s0, t0) = ASTUtil.getTypeWithForallSubst(ms.tcons, defs.tcons, tvs, ttype)
+        val (s0, t0) = ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype)
         val (s1, t1) = Type.quantify(tvs.values.toList, t0)
         val s2 = s0 ++ s1
         Qual(ps1 map { p => Substitutions.applySubst(s2, p) }, t1)
@@ -428,13 +428,13 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
     def lookupInstanceParamType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
 
-        case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t)
+        case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t)._2
 
         case t @ ASTTypeApply(thing: ASTTypeCon, params) =>
 
             // TODO: this can probably be simplified with a more intelligent usage of ASTUtil.findTypeVars and ASTUtil.getType
 
-            val tcon = ASTUtil.getType(lookup, tcons, Map.empty, thing).asInstanceOf[TCon]
+            val tcon = ASTUtil.getType(lookup, tcons, Map.empty, thing)._2.asInstanceOf[TCon]
 
             tcon.k match {
                 case Star if params.nonEmpty => throw TypeConstructorNoArgsError(tcon, t)
@@ -451,7 +451,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                             case _ => throw new Error("Illegal AST: type constructor is being applied with a non-typevar argument in parameters of typeclass.")
                         }
                     }
-                    ASTUtil.getType(lookup, tcons, tvars, t)
+                    ASTUtil.getType(lookup, tcons, tvars, t)._2
                 case _: Kvar => throw new Error("tcon kind is Kvar")
             }
 

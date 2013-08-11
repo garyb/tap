@@ -122,7 +122,7 @@ object TapNode {
             val t = ASTUtil.getType(state.tconLookup, state.tcons, Map.empty, ttype match {
                 case t: ASTForall => t
                 case t => ASTForall(ASTUtil.findTypeVars(t).toList, t)
-            })
+            })._2
             CastExpr(e, t)
 
         case ASTString(value) => StringExpr(value)
