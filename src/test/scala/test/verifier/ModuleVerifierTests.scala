@@ -901,6 +901,26 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TVar("a", Star)))
     }
 
+    it should "throw an error if type variables declared by forall have overlapping names" in {
+        val v = new ModuleVerifier(testScopes)
+
+        Given("a type where the name overlap occurs by shadowing")
+        evaluating {
+            v.getMemberType(
+                ModuleId("Test", "a"),
+                ASTQType(Nil, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeVar("a")))),
+                testDefs)
+        } should produce [TypeVariableOverlapError]
+
+        Given("a type where the name appears in parallel foralls")
+        evaluating {
+            v.getMemberType(
+                ModuleId("Test", "a"),
+                ASTQType(Nil, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeVar("b")))),
+                testDefs)
+        } should produce [TypeVariableOverlapError]
+    }
+
     // ------------------------------------------------------------------------
 
     behavior of "lookupInstanceParamType"
