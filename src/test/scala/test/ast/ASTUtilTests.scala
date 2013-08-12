@@ -259,5 +259,10 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
         s should be === Map(TVar("a", Star) -> TGen(lastForallId, 0))
     }
 
-    ignore should "return substitutions for type variables replaced with TGens in a Forall inside a ASTFunctionType" in {}
+    it should "return substitutions for type variables replaced with TGens in a Forall inside a ASTFunctionType" in {
+        val lookup = Map("String" -> ModuleId("Prelude", "String"))
+        val tcons = Map(ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star))
+        val s = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._1
+        s should be === Map(TVar("a", Star) -> TGen(lastForallId, 0))
+    }
 }
