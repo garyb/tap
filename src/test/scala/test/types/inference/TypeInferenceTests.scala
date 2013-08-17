@@ -12,11 +12,14 @@ import tap._
 import tap.types.inference.{TIError, Substitutions, TIInternalError}
 import tap.ir._
 import tap.util.trace
+import tap.util.PrettyPrint._
 
 class TypeInferenceTests extends FlatSpec {
 
     val testCE = ClassEnvironments.nullEnv
-    val testAs = Map.empty[Id, Qual[Type]]
+    val testAs = Map[Id, Qual[Type]](
+        ModuleId("Prelude", "show") -> Qual.quantify(List(TVar("a", Star)), Qual(List(IsIn(ModuleId("Prelude", "show"), List(TVar("a", Star)))), TVar("a", Star) fn tString))._2
+    )
     val nullCtx = Context(Substitutions.nullSubst, Map.empty[TapNode, Qual[Type]])
 
     //-------------------------------------------------------------------------
@@ -268,7 +271,28 @@ class TypeInferenceTests extends FlatSpec {
         } should produce [TIError]
     }
 
-    ignore should "build type inference constraints for RaiseErrorExprs" in {}
+    it should "build type inference constraints for RaiseErrorExprs" in {
+        val ce = testCE
+        val as = testAs + (LocalId("msg") -> Qual(Nil, TVar("s", Star)))
+        val ctx0 = nullCtx
+        val expr0 = ValueReadExpr(ModuleId("Prelude", "show"))
+        val expr1 = ValueReadExpr(LocalId("msg"))
+        val expr2 = ApplyExpr(expr0, expr1)
+        val expr3 = RaiseErrorExpr(expr2)
+        val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr3, Nil)
+        val tvShow = TVar("µ" + (tvId - 2), Star)
+        val tvApply = TVar("µ" + (tvId - 1), Star)
+        val tvResult = TVar("µ" + tvId, Star)
+        ctx1 should be === ctx0
+                .unify(TVar("s", Star), tvShow, expr2)
+                .unify(tvApply, tString, expr3)
+                .setNodeType(expr0, Qual(List(IsIn(ModuleId("Prelude", "show"), List(tvShow))), tvShow fn tString))
+                .setNodeType(expr1, TVar("s", Star))
+                .setNodeType(expr2, tvApply)
+                .setNodeType(expr3, tvResult)
+        ps should be === List(IsIn(ModuleId("Prelude", "show"), List(tvShow)))
+        t should be === tvResult
+    }
 
     //-------------------------------------------------------------------------
 
