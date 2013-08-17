@@ -257,6 +257,17 @@ class TypeInferenceTests extends FlatSpec {
     ignore should "build type inference constraints for FunctionExprs" in {}
     ignore should "build type inference constraints for FunctionExprs with no arguments" in {}
     ignore should "build type inference constraints for NativeValueExprs" in {}
+
+    it should "throw an error if the value in a RaiseErrorExpr does not unify with String" in {
+        val ce = testCE
+        val as = testAs
+        val ctx0 = nullCtx
+        val expr = RaiseErrorExpr(NumberExpr(0))
+        evaluating {
+            tiExpr(ce, as, ctx0, expr, Nil)
+        } should produce [TIError]
+    }
+
     ignore should "build type inference constraints for RaiseErrorExprs" in {}
 
     //-------------------------------------------------------------------------
