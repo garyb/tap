@@ -64,7 +64,13 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
                 Qual(List(IsIn(ModuleId("Prelude", "Show"), List(tNumber))), tNumber fn tString)
     }
 
-    ignore should "instantiate a type for a particular class instance when the class has multiple parameters" in {}
+    it should "instantiate a type for a particular class instance when the class has multiple parameters" in {
+        val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0), TGen(0, 1)))), Forall(0, List(Star, Star), (TGen(0, 0) fn TGen(0, 1)) fn tString))
+        val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString)))
+        val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
+        mti.makeInstanceMemberType(sc, tci) should be ===
+                Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString))), (tNumber fn tString) fn tString)
+    }
 
     // ------------------------------------------------------------------------
 
