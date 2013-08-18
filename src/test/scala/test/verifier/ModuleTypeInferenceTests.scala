@@ -11,7 +11,7 @@ import language.reflectiveCalls
 import tap.types.classes.ClassEnvironments._
 import tap.verifier.ModuleTypeInference
 
-class ModuleTypeInferenceTests extends FlatSpec {
+class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
 
     behavior of "apply"
     ignore should "do some things" in {}
@@ -29,7 +29,23 @@ class ModuleTypeInferenceTests extends FlatSpec {
         } should produce [Error]
     }
 
-    ignore should "throw an error if the instance type and forall'd variable counts differ" in {}
+    it should "throw an error if the instance type and forall'd variable counts differ" in {
+        Given("too many types on the instance")
+        evaluating {
+            val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
+            val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString)))
+            val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
+            mti.makeInstanceMemberType(sc, tci)
+        } should produce [Error]
+
+        Given("not enough types on the instance")
+        evaluating {
+            val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0), TGen(0, 1)))), Forall(0, List(Star, Star), (TGen(0, 0) fn TGen(0, 1)) fn tString))
+            val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber)))
+            val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
+            mti.makeInstanceMemberType(sc, tci)
+        } should produce [Error]
+    }
 
     it should "instantiate a type for a particular class instance" in {
         val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
