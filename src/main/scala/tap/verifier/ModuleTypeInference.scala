@@ -69,13 +69,12 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
      * @param tci The typeclass instance.
      * @return The instantiated type.
      */
-    def makeInstanceMemberType(sc: Qual[Type], tci: Inst): Qual[Type] = {
-        sc.h match {
-            case t: Forall =>
-                if (tci.tc.ts.length != t.ks.length) throw new Error("Type parameter mismatch count for " + prettyPrint(tci) + " instantiating " + prettyPrint(sc))
-                TypeInference.freshInstPartial(tci.tc.ts, sc)
-            case _ => throw new Error("makeInstanceMemberType called on non-Forall type " + prettyPrint(sc))
-        }
+    def makeInstanceMemberType(sc: Qual[Type], tci: Inst): Qual[Type] = sc.h match {
+        case t: Forall =>
+            if (sc.ps(0).id != tci.tc.id) throw new Error("Cannot instantiate type " + prettyPrint(sc) + " with class " + prettyPrint(tci))
+            if (tci.tc.ts.length != t.ks.length) throw new Error("Type parameter mismatch count for " + prettyPrint(tci) + " instantiating " + prettyPrint(sc))
+            TypeInference.freshInstPartial(tci.tc.ts, sc)
+        case _ => throw new Error("makeInstanceMemberType called on non-Forall type " + prettyPrint(sc))
     }
 
     def buildClassEnv(defs: ModuleDefinitions): Map[String, ClassEnv] = {

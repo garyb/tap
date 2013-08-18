@@ -20,6 +20,15 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
 
     behavior of "makeInstanceMemberType"
 
+    it should "throw an error if instantiating a type that does not have predicates for the instance class" in {
+        val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
+        val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "NotShow"), List(tNumber)))
+        val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
+        evaluating {
+            mti.makeInstanceMemberType(sc, tci)
+        } should produce [Error]
+    }
+
     it should "throw an error if passed a non-Forall type" in {
         val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
         val tci = Inst("Test", Nil, IsIn(ModuleId("Prelude", "Show"), List(tNumber)))
