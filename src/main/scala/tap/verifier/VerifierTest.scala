@@ -39,16 +39,25 @@ object VerifierTest {
                 val mtcs = defs.tcs.filterKeys { msn => msn.mId == mname  }
                 if (mtcs.nonEmpty) trace("\nType classes:\n" + (mtcs.map { case (ModuleId(_, tci), tc) => tci + " :: " + printTypeclassKind(tc.vs) }.toList.sortBy({ x => x }) mkString "\n"))
 
+                val mts = defs.mts.filterKeys {
+                    case id @ ModuleId(mId, _) => mId == mname && !(defs.dcons contains id)
+                    case InstId(mId, _, _, _) => mId == mname
+                    case _ => false
+                }
+                if (mts.nonEmpty) trace("\nMember types:\n" + mts.map { case (qId, mt) =>
+                    qId.id + " :: " + prettyPrint(mt)
+                }.toList.sortBy({ x => x }).mkString("\n\n"))
+
                 val mis = defs.mis.filterKeys {
                     case ModuleId(mId, _) => mId == mname
                     case InstId(mId, _, _, _) => mId == mname
                     case _ => false
                 }
-                if (mis.nonEmpty) trace("\nMember implementations:\n" + (mis.map { case (qId, mi) =>
+                if (mis.nonEmpty) trace("\nMember implementations:\n" + mis.map { case (qId, mi) =>
                     qId.id + " :: " + prettyPrint(ets(mi)) + "\n" +
                         (" " * (qId.id.length + 4)) + prettyPrint(mi)
 
-                }).toList.sortBy({ x => x }).mkString("\n\n"))
+                }.toList.sortBy({ x => x }).mkString("\n\n"))
             }
         }
     }

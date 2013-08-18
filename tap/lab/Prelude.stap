@@ -55,14 +55,14 @@
 ; desired BG: { [tmpX], ([tmpA, tmpB], [tmpC, tmpD]) }
 ;
 
-(def tmpX (-> a a))
-(let tmpX (lambda (x) (tmpD x) x))
+; (def tmpX (-> a a))
+; (let tmpX (lambda (x) (tmpD x) x))
 
-(let tmpA (lambda (a) (tmpB a) a))
-(let tmpB (lambda (b) (tmpA b) (tmpX b) b))
+; (let tmpA (lambda (a) (tmpB a) a))
+; (let tmpB (lambda (b) (tmpA b) (tmpX b) b))
 
-(let tmpC (lambda (c) (tmpA c) (tmpD c) c))
-(let tmpD (lambda (d) (tmpC d) d))
+; (let tmpC (lambda (c) (tmpA c) (tmpD c) c))
+; (let tmpD (lambda (d) (tmpC d) d))
 
 ; -----------------------------------------------------------------------------
 ; - Basic data types ----------------------------------------------------------
@@ -105,8 +105,12 @@
 ; - Plus ----------------------------------------------------------------------
 ; -----------------------------------------------------------------------------
 
-; (class Plus (a)
- ; (def + (-> a a a)))
+(class Plus (a)
+ (def + (-> a a a)))
+ 
+(class Test (t)
+  (def bar (-> t t))
+  (def foo (=> (Plus p)) (-> p t t)))
 
 ; (instance Plus (Number)
   ; (let + native))
