@@ -131,7 +131,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
             List(ModuleId("Prelude","tmpD"), ModuleId("Prelude","tmpC"))
         )
 
-        bgs should be === List(expl, impls)
+        bgs should be === List((expl, impls))
     }
 
     ignore should "do some other things" in {}
