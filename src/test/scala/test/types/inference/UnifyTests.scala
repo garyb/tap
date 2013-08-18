@@ -76,8 +76,11 @@ class UnifyTests extends FlatSpec {
     }
 
     it should "create nothing for mismatched foralls" in {
-        mgu(Forall(0, List(Star), TGen(0, 0)), Forall(1, List(Star), TGen(1, 0))) should be === None
         mgu(Forall(0, List(Star), TGen(0, 0)), Forall(0, List(Kfun(Star, Star)), TGen(0, 0))) should be === None
+    }
+
+    it should "create an empty substitution for compatible foralls" in {
+        mgu(Forall(0, List(Star), TGen(0, 0)), Forall(1, List(Star), TGen(1, 0))) should be === Some(nullSubst)
     }
 
     //-------------------------------------------------------------------------
@@ -160,8 +163,11 @@ class UnifyTests extends FlatSpec {
     }
 
     it should "create nothing for mismatched foralls" in {
-        `match`(Forall(0, List(Star), TGen(0, 0)), Forall(1, List(Star), TGen(1, 0))) should be === None
         `match`(Forall(0, List(Star), TGen(0, 0)), Forall(0, List(Kfun(Star, Star)), TGen(0, 0))) should be === None
+    }
+
+    it should "create an empty substitution for compatible foralls" in {
+        `match`(Forall(0, List(Star), TGen(0, 0)), Forall(1, List(Star), TGen(1, 0))) should be === Some(nullSubst)
     }
 
     //-------------------------------------------------------------------------
