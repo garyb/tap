@@ -20,6 +20,9 @@ class ModuleTypeInferenceTests extends FlatSpec {
 
     behavior of "makeInstanceMemberType"
 
+    ignore should "throw an error if passed a non-Forall type" in {}
+    ignore should "throw an error if the instance type and forall'd variable counts differ" in {}
+
     it should "instantiate a type for a particular class instance" in {
         val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
         val tci = Inst("Test", Nil, IsIn(ModuleId("Prelude", "Show"), List(tNumber)))
