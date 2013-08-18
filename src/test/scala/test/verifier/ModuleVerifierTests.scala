@@ -18,20 +18,20 @@ import tap.util.trace
 
 class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
-    val nullDefs = ModuleDefinitions(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+    val nullDefs = ModuleDefinitions.defaults
     val nullScopes = Map("Test" -> DefinitionsLookup.empty)
 
-    val testDefs =
-        ModuleDefinitions(
-            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star),
-                ModuleId("Test", "X1") -> TCon(ModuleId("Test", "X1"), Kfun(Star, Star))),
-            Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
-            Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty),
-                ModuleId("Test", "Y2") -> TypeclassDef(ModuleId("Test", "Y2"), Nil, List(TVar("a", Star), TVar("b", Star)), Set("yfn"), Set.empty)),
-            Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
-            Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star)),
-                ModuleId("Test", "yfn") -> Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TVar("a", Star) fn TVar("a", Star))),
-            Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X"))))
+    val testDefs = nullDefs.copy(
+        tcons = nullDefs.tcons ++ Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star),
+            ModuleId("Test", "X1") -> TCon(ModuleId("Test", "X1"), Kfun(Star, Star))),
+        dcons = nullDefs.dcons ++ Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
+        tcs = nullDefs.tcs ++ Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty),
+            ModuleId("Test", "Y2") -> TypeclassDef(ModuleId("Test", "Y2"), Nil, List(TVar("a", Star), TVar("b", Star)), Set("yfn"), Set.empty)),
+        tcis = nullDefs.tcis ++ Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
+        mts = nullDefs.mts ++ Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star)),
+            ModuleId("Test", "yfn") -> Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TVar("a", Star) fn TVar("a", Star))),
+        mis = nullDefs.mis ++ Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X")))
+    )
 
     val testScopes = Map("Test" -> DefinitionsLookup.empty
             .addTCon("X", ModuleId("Test", "X"))
@@ -94,7 +94,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                 (ModuleId("ModuleA", "TypeA") -> TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star))) +
                 (ModuleId("ModuleB", "TypeB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.dcons should be === testDefs.dcons +
-                (ModuleId("ModuleA", "DataA2") -> Forall(dataA2FI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(dataA2FI, 0)), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA2FI, 0))))) +
+                (ModuleId("ModuleA", "DataA2") -> Forall(dataA2FI, List(Star), TGen(dataA2FI, 0) fn TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA2FI, 0)))) +
                 (ModuleId("ModuleA", "DataA1") -> Forall(dataA1FI, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA1FI, 0)))) +
                 (ModuleId("ModuleB", "DataB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.tcs should be === testDefs.tcs +
@@ -104,8 +104,8 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                 (ModuleId("ModuleA", "ClassA") -> List(Inst("ModuleA", List(IsIn(ModuleId("ModuleA", "ClassA"), List(TVar("a", Star)))), IsIn(ModuleId("ModuleA", "ClassA"), List(TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TVar("a", Star))))))) +
                 (ModuleId("ModuleB", "ClassB") -> List(Inst("ModuleB", List(), IsIn(ModuleId("ModuleB", "ClassB"), List(TCon(ModuleId("ModuleB", "TypeB"), Star))))))
         defs.mts should be === testDefs.mts +
-                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(cmemberAFI, 0)))), Forall(cmemberAFI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(cmemberAFI, 0)), TGen(cmemberAFI, 0))))) +
-                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(cmemberBFI, 0)))), Forall(cmemberBFI, List(Star), TAp(TAp(TCon(ModuleId("Prelude", "->"), Kfun(Star, Kfun(Star, Star))), TGen(cmemberBFI, 0)), TGen(cmemberBFI, 0)))))
+                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(cmemberAFI, 0)))), Forall(cmemberAFI, List(Star), TGen(cmemberAFI, 0) fn TGen(cmemberAFI, 0)))) +
+                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(cmemberBFI, 0)))), Forall(cmemberBFI, List(Star), TGen(cmemberBFI, 0) fn TGen(cmemberBFI, 0))))
 
         val testMis = testDefs.mis +
                 (ModuleId("ModuleA", "memberA") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
@@ -174,21 +174,21 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, Nil)
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
+        defs.tcons should be === nullDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle type constructors with type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), Nil)
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        defs.tcons should be === Map(ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))))
+        defs.tcons should be === nullDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))))
     }
 
     it should "handle data constructors with no arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        defs.dcons should be === Map(ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle data constructors with non-type variable arguments" in {
@@ -200,9 +200,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
-        defs.dcons should be === Map(
-            ModuleId("Test", "B") -> (tA fn tB)
-        )
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> (tA fn tB))
     }
 
     it should "handle circular dependencies between type constructors" in {
@@ -214,10 +212,9 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
-        defs.dcons should be === Map(
-            ModuleId("Test", "A") -> (tB fn tA),
-            ModuleId("Test", "B") -> (tA fn tB)
-        )
+        defs.dcons should be === nullDefs.dcons +
+                (ModuleId("Test", "A") -> (tB fn tA)) +
+                (ModuleId("Test", "B") -> (tA fn tB))
     }
 
     it should "handle self-referential data constructors" in {
@@ -226,9 +223,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
-        defs.dcons should be === Map(
-            ModuleId("Test", "B") -> (tA fn tA)
-        )
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> (tA fn tA))
     }
 
     it should "handle data constructors with quantified type variable arguments" in {
@@ -237,7 +232,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1))))
-        defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "infer the kind of type variables based upon their usage in data constructors" in {
@@ -246,7 +241,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Kfun(Star, Star), Star), TAp(TGen(fi, 0), TGen(fi, 1)) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1)))
-        defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "throw an error if the kind of type variables conflicts in the data constructors" in {
@@ -261,7 +256,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
         val fi = Type.lastForallId
         val fa = Forall(fi, List(Star), TGen(fi, 0)) fn TCon(ModuleId("Test", "A"), Star)
-        defs.dcons should be === Map(ModuleId("Test", "B") -> fa)
+        defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "extend the tcons and dcons in the definitions list and leave all existing values unchanged" in {
@@ -650,10 +645,8 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     }
 
     it should "throw an error if a member is defined more than once" in {
-        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty.addTCon("Unit", ModuleId("Prelude", "Unit"))))
-        val defs = ModuleDefinitions(
-            Map(ModuleId("Prelude", "Unit") -> TCon(ModuleId("Prelude", "Unit"), Star)),
-            Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+        val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.defaults))
+        val defs = ModuleDefinitions.defaults
         evaluating {
             v.addMemberDefs(Seq(
                 "Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("Unit"))),

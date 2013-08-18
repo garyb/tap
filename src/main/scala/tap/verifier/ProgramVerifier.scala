@@ -49,7 +49,7 @@ object ProgramVerifier {
 
         // Iterate through the grouped modules and run the verifier on each group, building up the list of all
         // module-scoped definitions in the program
-        val defs = ord.foldLeft((ModuleDefinitions.empty, Map.empty[TapNode, Qual[Type]], Map.empty: Subst)) {
+        val defs = ord.foldLeft((ModuleDefinitions.defaults, Map.empty[TapNode, Qual[Type]], Map.empty: Subst)) {
             case ((defs0, ets0, s0), moduleGroup) =>
                 if (moduleGroup.length == 1) trace("Resolving module", moduleGroup(0))
                 else trace("Resolving module group", moduleGroup.mkString(", "))
@@ -99,7 +99,7 @@ object ProgramVerifier {
         val lookups = asts mapValues { m => findExportedDefinitions(m.name, asts) }
         asts map { case (_, ast @ ASTModule(mId, defs)) =>
 
-            val importedDefs = imports(mId).foldLeft(DefinitionsLookup.empty) {
+            val importedDefs = imports(mId).foldLeft(DefinitionsLookup.defaults) {
                 case (importedDefs, ast @ ASTImport(name, defs, prefix)) =>
                     var lookup = lookups.getOrElse(name, throw UnknownModuleError(name, ast))
                     if (defs != None) lookup = lookup.select(mId, name, defs.get)
@@ -132,17 +132,7 @@ object ProgramVerifier {
                 (memberImpls map getModuleId("member", importedDefs.members)) ++
                 (tcMemberDefs map getModuleId("member", importedDefs.members))
 
-
-
-            val moduleDefs = if (mId == "Prelude") {
-                DefinitionsLookup(tcons, dcons, tcs, mms)
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var"))
-            } else {
-                DefinitionsLookup(tcons, dcons, tcs, mms)
-            }
-            mId -> DefinitionsLookup.merge(mId, importedDefs, moduleDefs)
+            mId -> DefinitionsLookup.merge(mId, importedDefs, DefinitionsLookup(tcons, dcons, tcs, mms))
         }
     }
 
@@ -190,12 +180,6 @@ object ProgramVerifier {
                 case (defs, _) => defs
             }
         }
-        val result = find(mId, Set(mId))
-        if (mId == "Prelude") {
-            result.addTCon("->", ModuleId("Prelude", "->"))
-                  .addTCon("Var", ModuleId("Prelude", "Var"))
-                  .addDCon("Var", ModuleId("Prelude", "Var"))
-        }
-        else result
+        find(mId, Set(mId))
     }
 }

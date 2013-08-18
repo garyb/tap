@@ -41,7 +41,6 @@ case object WildcardValueExpr extends PatternNode
 case class StringExpr(value: String) extends ExprLeaf with PatternNode
 case class NumberExpr(value: Double) extends ExprLeaf with PatternNode
 case class FunctionExpr(arg: ArgumentDef, body: TapExpr) extends ExprNode
-case class NativeValueExpr(id: Id, t: Type) extends ExprLeaf
 
 // ---[ argument declarations ]----------------------------------------------------------------------------------------
 
@@ -63,16 +62,6 @@ object TapNode {
     }
 
     private def vUnit = ValueReadExpr(ModuleId("Prelude", "Unit"))
-
-    def fromAST(expr: ASTExpr, state: ResolveState, nativeContext: Id, natives: Map[Id, Type]): TapExpr = expr match {
-        case ASTNativeValue =>
-            natives.get(nativeContext) match {
-                case Some(ttype) => NativeValueExpr(nativeContext, ttype).setPos(expr.pos)
-                case None => throw InvalidNativeError(nativeContext, expr)
-            }
-
-        case _ => fromAST(expr, state)
-    }
 
     def fromAST(expr: ASTExpr, state: ResolveState): TapExpr = (expr match {
 

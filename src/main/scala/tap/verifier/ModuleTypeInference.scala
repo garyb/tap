@@ -60,7 +60,7 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
         val as = (defs.dcons mapValues { dcon => Qual(Nil, dcon) }) ++ defs.mts
         val (as2, s, ets) = TypeInference.tiProgram(ces(modules(0).name), as, bindGroups)
         val infmts = as2.collect { case (id, t) if !defs.mts.contains(id) => id -> t }
-        (ModuleDefinitions(defs.tcons, defs.dcons, defs.tcs, defs.tcis, defs.mts ++ infmts, defs.mis ++ mis), s, ets)
+        (defs.copy(mts = defs.mts ++ infmts, mis = defs.mis ++ mis), s, ets)
     }
 
     /**

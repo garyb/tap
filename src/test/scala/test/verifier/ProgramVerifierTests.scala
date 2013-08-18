@@ -165,34 +165,19 @@ class ProgramVerifierTests extends FlatSpec with GivenWhenThen {
         val imports = modules mapValues findImports
         makeScopedLookups(modules, imports) should be ===
             Map(
-                "Prelude" -> DefinitionsLookup.empty
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var")),
-                "Test" -> DefinitionsLookup.empty
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var"))
+                "Prelude" -> DefinitionsLookup.defaults,
+                "Test" -> DefinitionsLookup.defaults
                         .addMember("fn", ModuleId("FooA", "fn"))
                         .addClass("FooClass", ModuleId("FooB", "FooClass"))
                         .addMember("cfn", ModuleId("FooB", "cfn"))
                         .addTCon("TypeX", ModuleId("FooC", "TypeX"))
                         .addDCon("MakeX", ModuleId("FooC", "MakeX")),
-                "FooA" -> DefinitionsLookup.empty
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var"))
+                "FooA" -> DefinitionsLookup.defaults
                         .addMember("fn", ModuleId("FooA", "fn")),
-                "FooB" -> DefinitionsLookup.empty
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var"))
+                "FooB" -> DefinitionsLookup.defaults
                         .addClass("FooClass", ModuleId("FooB", "FooClass"))
                         .addMember("cfn", ModuleId("FooB", "cfn")),
-                "FooC" -> DefinitionsLookup.empty
-                        .addTCon("->", ModuleId("Prelude", "->"))
-                        .addTCon("Var", ModuleId("Prelude", "Var"))
-                        .addDCon("Var", ModuleId("Prelude", "Var"))
+                "FooC" -> DefinitionsLookup.defaults
                         .addTCon("TypeX", ModuleId("FooC", "TypeX"))
                         .addDCon("MakeX", ModuleId("FooC", "MakeX"))
             )

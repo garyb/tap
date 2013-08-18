@@ -10,6 +10,7 @@ import tap.types._
 import tap.types.kinds._
 import tap.verifier.errors._
 import language.reflectiveCalls
+import tap.verifier.defs.ModuleDefinitions
 
 class ASTUtilTests extends FlatSpec with GivenWhenThen {
 
@@ -215,8 +216,8 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
     }
 
     it should "return Foralls as needed" in {
-        val lookup = Map("String" -> ModuleId("Prelude", "String"))
-        val tcons = Map(ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star))
+        val lookup = Map("String" -> ModuleId("Native", "String"))
+        val tcons = ModuleDefinitions.defaults.tcons
         val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._2
         t1 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn TGen(lastForallId, 0)) fn tString)
 

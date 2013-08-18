@@ -3,15 +3,16 @@ package test.types.classes
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.types.kinds._
-import tap.types.Type.{tString, tNumber, tBool, tList}
+import tap.types.Type.{tString, tNumber, tBool}
 import tap.types.classes.{TypeclassDef, IsIn}
 import tap.types.classes.IsIn._
 import tap.types.classes.ClassEnvironments._
 import tap.types._
 import tap.ModuleId
 import language.reflectiveCalls
+import test.TypeFixture
 
-class IsInTests extends FlatSpec with GivenWhenThen {
+class IsInTests extends FlatSpec with GivenWhenThen with TypeFixture {
 
     behavior of "tv"
 

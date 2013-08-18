@@ -346,18 +346,18 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             val mis: Seq[(Id, TapExpr)] = m.members.collect { case ASTLet(name, expr) =>
                 val id = ModuleId(mId, name)
-                id -> TapNode.fromAST(expr, rs, id, Natives.types)
+                id -> TapNode.fromAST(expr, rs)
             } ++
             m.members.collect { case tc: ASTClass =>
                 tc.members.collect { case ASTClassMemberImpl(name, tcm) =>
                     val id = ModuleId(mId, name)
-                    id -> TapNode.fromAST(tcm, rs, id, Natives.types)
+                    id -> TapNode.fromAST(tcm, rs)
                 }
             }.flatten ++
             m.members.collect { case tci: ASTClassInst =>
                 tci.members.map { case ASTClassMemberImpl(name, tcim) =>
                     val id = InstId(m.name, ms.tcs(tci.tcName), tci.params map { p => ASTUtil.getTConName(ms.tcons, p) }, name)
-                    id -> TapNode.fromAST(tcim, rs, id, Natives.types)
+                    id -> TapNode.fromAST(tcim, rs)
                 }
             }.flatten
 

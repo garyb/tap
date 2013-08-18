@@ -8,7 +8,7 @@ import tap.types.classes.{Qual, TypeclassDef}
 import tap.{ModuleId, Id}
 import tap.types.kinds.{Star, Kfun}
 
-case class ModuleDefinitions(tcons: Map[ModuleId, TCon],
+case class ModuleDefinitions private (tcons: Map[ModuleId, TCon],
                              dcons: Map[ModuleId, Type],
                              tcs: Map[ModuleId, TypeclassDef],
                              tcis: Map[ModuleId, List[Inst]],
@@ -16,16 +16,23 @@ case class ModuleDefinitions(tcons: Map[ModuleId, TCon],
                              mis: Map[Id, TapExpr])
 
 object ModuleDefinitions {
-    val empty = ModuleDefinitions(
-        Map(
-            ModuleId("Prelude", "->") -> tArrow.asInstanceOf[TCon],
-            ModuleId("Prelude", "Var") -> TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star))
+    val defaults = ModuleDefinitions(
+        tcons = Map(
+            ModuleId("Native", "->") -> tArrow.asInstanceOf[TCon],
+            ModuleId("Native", "Number") -> tNumber.asInstanceOf[TCon],
+            ModuleId("Native", "String") -> tString.asInstanceOf[TCon],
+            ModuleId("Native", "Bool") -> tBool.asInstanceOf[TCon],
+            ModuleId("Native", "Unit") -> tUnit.asInstanceOf[TCon],
+            ModuleId("Native", "Var") -> TCon(ModuleId("Native", "Var"), Kfun(Star, Star))
         ),
-        Map(
-            ModuleId("Prelude", "Var") -> tVar
+        dcons = Map(
+            ModuleId("Native", "True") -> tBool,
+            ModuleId("Native", "False") -> tBool,
+            ModuleId("Native", "Unit") -> tUnit,
+            ModuleId("Native", "Var") -> tVar
         ),
-        Map.empty,
-        Map.empty,
-        Map.empty,
-        Map.empty)
+        tcs = Map.empty,
+        tcis = Map.empty,
+        mts = Map.empty,
+        mis = Map.empty)
 }

@@ -3,7 +3,7 @@ package tap.verifier.defs
 import tap.ModuleId
 import tap.verifier.errors.{UnknownImportDefsError, ImportConflictError}
 
-case class DefinitionsLookup(tcons: Map[String, ModuleId],
+case class DefinitionsLookup (tcons: Map[String, ModuleId],
                                dcons: Map[String, ModuleId],
                                tcs: Map[String, ModuleId],
                                members: Map[String, ModuleId]) {
@@ -46,6 +46,24 @@ case class DefinitionsLookup(tcons: Map[String, ModuleId],
 object DefinitionsLookup {
 
     val empty = DefinitionsLookup(Map.empty, Map.empty, Map.empty, Map.empty)
+
+    val defaults = DefinitionsLookup(
+        tcons = Map(
+            "->" -> ModuleId("Native", "->"),
+            "Number" -> ModuleId("Native", "Number"),
+            "String" -> ModuleId("Native", "String"),
+            "Bool" -> ModuleId("Native", "Bool"),
+            "Unit" -> ModuleId("Native", "Unit"),
+            "Var" -> ModuleId("Native", "Var")
+        ),
+        dcons = Map(
+            "True" -> ModuleId("Native", "True"),
+            "False" -> ModuleId("Native", "False"),
+            "Unit" -> ModuleId("Native", "Unit"),
+            "Var" -> ModuleId("Native", "Var")
+        ),
+        tcs = Map.empty,
+        members = Map.empty)
 
     /**
      * Merges the imported definitions for two modules, to be included in module `mId`.

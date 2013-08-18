@@ -15,13 +15,6 @@
 ; (export (module Data.Functor))
 
 ; -----------------------------------------------------------------------------
-; - Native data types ---------------------------------------------------------
-; -----------------------------------------------------------------------------
-
-(data Number)
-(data String)
-
-; -----------------------------------------------------------------------------
 ; - Vars ----------------------------------------------------------------------
 ; -----------------------------------------------------------------------------
 
@@ -33,43 +26,10 @@
 ; (def set! (-> (Var a) a a))
 ; (let set! native)
 
-; Well, this should be a test case.
-; NoSuchElementException: key not found: ModuleId(Prelude,tmpY)
-; (def tmpZ (-> a a))
-; (let tmpZ (lambda (z) (tmpX z) z))
-; (let tmpY (lambda (y) (tmpZ y)))
-; (let tmpX (lambda (x) (tmpY x) (tmpZ x)))
-
-
-; digraph {
-;   X [shape=box]
-;   A -> B
-;   B -> A
-;   B -> X
-;   C -> A
-;   C -> D
-;   D -> C
-;   X -> D
-; }
-;
-; desired BG: { [tmpX], ([tmpA, tmpB], [tmpC, tmpD]) }
-;
-
-; (def tmpX (-> a a))
-; (let tmpX (lambda (x) (tmpD x) x))
-
-; (let tmpA (lambda (a) (tmpB a) a))
-; (let tmpB (lambda (b) (tmpA b) (tmpX b) b))
-
-; (let tmpC (lambda (c) (tmpA c) (tmpD c) c))
-; (let tmpD (lambda (d) (tmpC d) d))
-
 ; -----------------------------------------------------------------------------
 ; - Basic data types ----------------------------------------------------------
 ; -----------------------------------------------------------------------------
 
-(data Unit Unit)
-(data Bool True False)
 (data (List a) (: a (List a)) EOL)
 (data (Tuple2 a b) (Tuple2 a b))
 

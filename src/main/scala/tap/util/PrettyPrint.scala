@@ -41,7 +41,6 @@ object PrettyPrint {
                 case fn => "(lambda (" + (args.reverse map prettyPrint mkString " ") + ") " + prettyPrint(fn) + ")"
             }
 
-        case NativeValueExpr(id, _) => "native"
         case CastExpr(e, t) => "(cast " + prettyPrint(e) + " " + prettyPrint(t) + ")"
         case RaiseErrorExpr(e) => "(error " + prettyPrint(e) + ")"
         case Argument(id) => id

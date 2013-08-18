@@ -25,21 +25,17 @@ object Type {
     }
     def lastForallId: Int = forallId
 
-    private def id(name: String) = ModuleId("Prelude", name)
-
     /**
      * Constructs a function type.
      */
     implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
 
-    val tArrow: Type  = TCon(id("->"), Kfun(Star, Kfun(Star, Star)))
-    val tNumber: Type = TCon(id("Number"), Star)
-    val tString: Type = TCon(id("String"), Star)
-    val tBool: Type   = TCon(id("Bool"), Star)
-    val tUnit: Type   = TCon(id("Unit"), Star)
-    val tList: Type   = TCon(id("List"), Kfun(Star, Star))
-    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(id("Var"), Kfun(Star, Star)), TVar("a", Star)))._2
-    val tAny: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star))._2
+    val tArrow: Type  = TCon(ModuleId("Native", "->"), Kfun(Star, Kfun(Star, Star)))
+    val tNumber: Type = TCon(ModuleId("Native", "Number"), Star)
+    val tString: Type = TCon(ModuleId("Native", "String"), Star)
+    val tBool: Type   = TCon(ModuleId("Native", "Bool"), Star)
+    val tUnit: Type   = TCon(ModuleId("Native", "Unit"), Star)
+    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))._2
 
     /**
      * Finds the ID of a type constructor in the specified type. This should only be called when it is known the type

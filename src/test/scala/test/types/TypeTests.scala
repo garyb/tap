@@ -9,8 +9,9 @@ import tap.types.kinds._
 import tap.types.inference.Substitutions.nullSubst
 import java.lang.IllegalArgumentException
 import language.reflectiveCalls
+import test.TypeFixture
 
-class TypeTests extends FlatSpec {
+class TypeTests extends FlatSpec with TypeFixture {
 
     behavior of "getTConID"
 

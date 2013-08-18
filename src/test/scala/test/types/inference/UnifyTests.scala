@@ -9,8 +9,9 @@ import tap.types.inference.Substitutions._
 import tap.types.kinds._
 import tap.ast.NullFilePosition
 import tap.types.inference.TIError
+import test.TypeFixture
 
-class UnifyTests extends FlatSpec {
+class UnifyTests extends FlatSpec with TypeFixture {
 
     //-------------------------------------------------------------------------
 

@@ -220,22 +220,6 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
     // ------------------------------------------------------------------------
 
-    behavior of "fromAST for ASTNativeValue with native context"
-
-    it should "return a NativeValueExpr if a native has been defined for the current context" in {
-        val id = LocalId("Test")
-        val natives = Map[Id, Type](LocalId("Test") -> Type.tUnit)
-        fromAST(ASTNativeValue, nullState, id, natives) should equal(NativeValueExpr(id, Type.tUnit))
-    }
-
-    it should "throw an InvalidNativeError if no native has been defined for the current context" in {
-        evaluating {
-            fromAST(ASTNativeValue, nullState, LocalId("Nothing"), Map.empty)
-        } should produce [InvalidNativeError]
-    }
-
-    // ------------------------------------------------------------------------
-
     behavior of "fromAST for ASTValueRead"
 
     it should "throw an error if the value being read is not in scope" in {

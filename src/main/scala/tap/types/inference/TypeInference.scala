@@ -142,9 +142,6 @@ object TypeInference {
             val bt = at fn rt
             (ctx1.setNodeType(node, bt).setNodeType(argNode, at), ps, bt)
 
-        case NativeValueExpr(ref, t) =>
-            (ctx.setNodeType(node, t), Nil, t)
-
         case RaiseErrorExpr(e) =>
             val (ctx1, ps, te) = tiExpr(ce, as, ctx, e, explArgs)
             val ctx2 = ctx1.unify(te, tString, e)

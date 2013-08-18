@@ -1,11 +1,6 @@
 package test
 
 import org.scalatest.matchers.{MatchResult, Matcher}
-import tap.ir.ApplyExpr
-import tap.ir.BlockExpr
-import tap.ir.NativeValueExpr
-import tap.ir.NumberExpr
-import tap.ir.StringExpr
 import tap.ir._
 
 trait TapNodeEquality {
@@ -27,7 +22,6 @@ trait TapNodeEquality {
         case (StringExpr(x), StringExpr(y)) => x == y
         case (NumberExpr(x), NumberExpr(y)) => x == y
         case (FunctionExpr(a1, b1), FunctionExpr(a2, b2)) => test(a1, a2) && test(b1, b2)
-        case (NativeValueExpr(x, t), NativeValueExpr(y, u)) => x == y && t == u
         case (x, y) => x == y
     }
 
