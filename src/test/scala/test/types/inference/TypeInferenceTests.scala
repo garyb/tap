@@ -13,6 +13,7 @@ import tap.types.inference.{TIError, Substitutions, TIInternalError}
 import tap.ir._
 import tap.util.trace
 import tap.util.PrettyPrint._
+import language.reflectiveCalls
 
 class TypeInferenceTests extends FlatSpec {
 
