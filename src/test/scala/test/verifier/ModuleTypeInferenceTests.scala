@@ -21,11 +21,11 @@ class ModuleTypeInferenceTests extends FlatSpec {
     behavior of "makeInstanceMemberType"
 
     it should "instantiate a type for a particular class instance" in {
-        val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TVar("a", Star)))), TVar("a", Star) fn tString)
+        val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
         val tci = Inst("Test", Nil, IsIn(ModuleId("Prelude", "Show"), List(tNumber)))
         val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
         mti.makeInstanceMemberType(sc, tci) should be ===
-                Qual(Nil, tNumber fn tString)
+                Qual(List(IsIn(ModuleId("Prelude", "Show"), List(tNumber))), tNumber fn tString)
     }
 
     ignore should "instantiate a type for a particular class instance when the class has multiple parameters" in {}

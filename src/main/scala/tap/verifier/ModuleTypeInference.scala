@@ -13,6 +13,8 @@ import tap.types.inference.{TypeInference, Substitutions}
 import tap.util.{Graph, trace}
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.types.{Forall, Type}
+import tap.verifier.errors.VerifierError
+import tap.util.PrettyPrint._
 
 class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, DefinitionsLookup], val dependencies: Map[String, Set[String]]) {
 
@@ -70,10 +72,12 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
      * @return The instantiated type.
      */
     def makeInstanceMemberType(sc: Qual[Type], tci: Inst): Qual[Type] = {
-        val qt0 = TypeInference.freshInst(sc)
-        val subst = (Qual.tv(qt0) zip tci.tc.ts).toMap
-        val qt1 = Qual(tci.ps, Substitutions.applySubst(subst, qt0.h))
-        Qual.quantify(Qual.tv(qt1), qt1)._2
+        sc.h match {
+            case t: Forall =>
+                if (tci.tc.ts.length != t.ks.length) throw new Error("Type parameter mismatch count for " + prettyPrint(tci) + " instantiating " + prettyPrint(sc))
+                TypeInference.freshInstPartial(tci.tc.ts, sc)
+            case _ => throw new Error("makeInstanceMemberType called on non-Forall type " + prettyPrint(sc))
+        }
     }
 
     def buildClassEnv(defs: ModuleDefinitions): Map[String, ClassEnv] = {
