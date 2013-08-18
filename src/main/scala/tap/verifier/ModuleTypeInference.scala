@@ -1,6 +1,5 @@
 package tap.verifier
 
-import scala.annotation.tailrec
 import tap._
 import tap.ast.ASTModule
 import tap.ir._
@@ -9,11 +8,10 @@ import tap.types.classes.ClassEnvironments.{ClassEnv, Inst}
 import tap.types.classes._
 import tap.types.inference.Substitutions.Subst
 import tap.types.inference.TypeInference.ExprTypeMap
-import tap.types.inference.{TypeInference, Substitutions}
-import tap.util.{Graph, trace}
+import tap.types.inference.TypeInference
+import tap.util.Graph
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.types.{Forall, Type}
-import tap.verifier.errors.VerifierError
 import tap.util.PrettyPrint._
 
 class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, DefinitionsLookup], val dependencies: Map[String, Set[String]]) {
@@ -40,9 +38,9 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
                 val t = m match {
                     case InstId(mId, tcId, ps, id) =>
                         val tc = defs.tcs(tcId)
-                        val tci = (defs.tcis(tcId) find { case Inst(_, _, IsIn(_, tciPs)) =>
+                        val tci = defs.tcis(tcId) find { case Inst(_, _, IsIn(_, tciPs)) =>
                             tciPs forall { tcip => ps contains getTConID(tcip) }
-                        }) match {
+                        } match {
                             case Some(tci) => tci
                             case None => throw new Error("Unable to find appropriate instance for " + tc + " with params " + ps)
                         }
@@ -106,11 +104,11 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
 
             // Find all the instances defined by or reaching the current module
             val currModuleDeps = dependencies(mId)
-            val mtcis = (mtcs.valuesIterator.filter { id => defs.tcis contains id } flatMap {
+            val mtcis = mtcs.valuesIterator.filter { id => defs.tcis contains id } flatMap {
                 case id => defs.tcis(id).collect {
                     case inst if inst.mId == mId || (currModuleDeps contains inst.mId) => inst
                 }
-            })
+            }
 
             mId -> ClassEnvironments.checkInsts(mtcis.foldLeft(ce)(ClassEnvironments.addInst))
 
