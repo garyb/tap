@@ -3,6 +3,7 @@ package tap.interpreter
 import annotation.tailrec
 import tap.ir._
 import tap.{LocalId, ModuleId, Id}
+import tap.types.Natives._
 import scala.collection.mutable.ArrayBuffer
 
 object Interpreter {
@@ -16,9 +17,9 @@ object Interpreter {
 
     type Scope = Map[Id, IValue]
 
-    val iTrue: IValue = IData(ModuleId("Prelude", "True"), ArrayBuffer.empty)
-    val iFalse: IValue = IData(ModuleId("Prelude", "False"), ArrayBuffer.empty)
-    val iUnit: IValue = IData(ModuleId("Prelude", "Unit"), ArrayBuffer.empty)
+    val iTrue: IValue = IData(idTrue, ArrayBuffer.empty)
+    val iFalse: IValue = IData(idFalse, ArrayBuffer.empty)
+    val iUnit: IValue = IData(idUnit, ArrayBuffer.empty)
 
     def eval(expr: TapExpr, scope: Scope): IValue = expr match {
         case BlockExpr(es) => es.foldLeft(iUnit) { (v, e) => eval(e, scope) }
@@ -33,6 +34,7 @@ object Interpreter {
 
         case MatchExpr(expr, cases) => evalCases(cases, eval(expr, scope), scope)
         case LetExpr(name, value, inner) => eval(inner, scope + (LocalId(name) -> eval(value, scope)))
+        case ValueReadExpr(id @ ModuleId("Native", _)) => INative(InterpreterNatives.natives(id))
         case ValueReadExpr(ref) => scope(ref)
         case fn: FunctionExpr => IFunctionExpr(fn, scope)
         case CastExpr(value, _) => eval(value, scope)

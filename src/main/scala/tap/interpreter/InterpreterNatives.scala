@@ -1,6 +1,6 @@
 package tap.interpreter
 
-import tap.{ModuleId, Id}
+import tap.ModuleId
 import tap.interpreter.Interpreter._
 import tap.types.Natives._
 
@@ -10,15 +10,15 @@ object InterpreterNatives {
         x => INative(y => fn(List(x, y)))
     }
 
-    val natives: Map[Id, IValue => IValue] = Map(
+    val natives: Map[ModuleId, IValue => IValue] = Map(
 
         `get!` -> {
-            case IData(ModuleId("Prelude", "Var"), items) => items(0)
-            case _ => throw InterpreterError("Invalid type")
+            case IData(id, items) if id == idVar => items(0)
+            case x => throw InterpreterError("Invalid type")
         },
 
         `set!` -> make2 {
-            case List(v @ IData(ModuleId("Prelude", "Var"), items), x) =>
+            case List(v @ IData(id, items), x) if id == idVar =>
                 items(0) = x
                 v
             case _ => throw InterpreterError("Invalid type")
