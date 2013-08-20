@@ -9,22 +9,24 @@ import language.reflectiveCalls
 object Natives {
 
     val idArrow = ModuleId("Native", "->")
-    val tArrow: Type = TCon(idArrow, Kfun(Star, Kfun(Star, Star)))
+    val tArrow = TCon(idArrow, Kfun(Star, Kfun(Star, Star)))
 
     val idNumber = ModuleId("Native", "Number")
-    val tNumber: Type = TCon(idNumber, Star)
+    val tNumber = TCon(idNumber, Star)
 
     val idString = ModuleId("Native", "String")
-    val tString: Type = TCon(idString, Star)
+    val tString = TCon(idString, Star)
 
     val idBool = ModuleId("Native", "Bool")
-    val tBool: Type = TCon(idBool, Star)
+    val idTrue = ModuleId("Native", "True")
+    val idFalse = ModuleId("Native", "False")
+    val tBool = TCon(idBool, Star)
 
     val idUnit = ModuleId("Native", "Unit")
-    val tUnit: Type = TCon(idUnit, Star)
+    val tUnit = TCon(idUnit, Star)
 
     val idVar = ModuleId("Native", "Var")
-    val tVar = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))._2
+    val tVar = TCon(idVar, Kfun(Star, Star))
 
     val `get!` = ModuleId("Native", "get!")
     val `set!` = ModuleId("Native", "set!")
@@ -45,7 +47,23 @@ object Natives {
     val `showNum` = InstId("Text.Show", ModuleId("Text.Show", "Show"), List(idNumber), "show")
     val `readNum` = InstId("Text.Read", ModuleId("Text.Read", "Read"), List(idNumber), "read")
 
-    val types: Map[Id, Type] = Map(
+    val tcons: Map[ModuleId, TCon] = Map(
+        idArrow -> tArrow,
+        idNumber -> tNumber,
+        idString -> tString,
+        idBool -> tBool,
+        idUnit -> tUnit,
+        idVar -> tVar
+    )
+
+    val types: Map[ModuleId, Type] = Map(
+
+        idTrue -> tBool,
+        idFalse -> tBool,
+
+        idVar -> Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))._2,
+
+        idUnit -> tUnit/*,
 
         `get!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
         `set!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))),
@@ -70,7 +88,9 @@ object Natives {
         `String<String` -> (tString fn (tString fn tBool)),
 
         `showNum` -> (tNumber fn tString),
-        `readNum` -> (tString fn tNumber)
+        `readNum` -> (tString fn tNumber)*/
     )
+
+    val dcons = types filter { id => Seq(idTrue, idFalse, idUnit, idVar) contains id }
 
 }

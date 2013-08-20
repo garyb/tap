@@ -2,6 +2,7 @@ package tap.verifier.defs
 
 import tap.ModuleId
 import tap.verifier.errors.{UnknownImportDefsError, ImportConflictError}
+import tap.types.Natives
 
 case class DefinitionsLookup (tcons: Map[String, ModuleId],
                                dcons: Map[String, ModuleId],
@@ -48,20 +49,8 @@ object DefinitionsLookup {
     val empty = DefinitionsLookup(Map.empty, Map.empty, Map.empty, Map.empty)
 
     val defaults = DefinitionsLookup(
-        tcons = Map(
-            "->" -> ModuleId("Native", "->"),
-            "Number" -> ModuleId("Native", "Number"),
-            "String" -> ModuleId("Native", "String"),
-            "Bool" -> ModuleId("Native", "Bool"),
-            "Unit" -> ModuleId("Native", "Unit"),
-            "Var" -> ModuleId("Native", "Var")
-        ),
-        dcons = Map(
-            "True" -> ModuleId("Native", "True"),
-            "False" -> ModuleId("Native", "False"),
-            "Unit" -> ModuleId("Native", "Unit"),
-            "Var" -> ModuleId("Native", "Var")
-        ),
+        tcons = Natives.tcons.map { case (mId @ ModuleId(_, id), _) => id -> mId },
+        dcons = Natives.dcons.map { case (mId @ ModuleId(_, id), _) => id -> mId },
         tcs = Map.empty,
         members = Map.empty)
 
