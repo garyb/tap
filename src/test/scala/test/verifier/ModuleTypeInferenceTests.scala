@@ -7,6 +7,7 @@ import tap._
 import tap.types.kinds._
 import tap.types._
 import tap.types.Type._
+import tap.types.Natives._
 import language.reflectiveCalls
 import tap.types.classes.ClassEnvironments._
 import tap.verifier.ModuleTypeInference

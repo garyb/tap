@@ -5,6 +5,7 @@ import org.scalatest.matchers.ShouldMatchers._
 import tap.ir.TapNodeUtil._
 import tap.ir._
 import tap.types.Type
+import tap.types.Natives._
 import tap.{InstId, LocalId, ModuleId}
 import test.TapNodeEquality
 
@@ -156,7 +157,7 @@ class TapNodeUtilTests extends FlatSpec with TapNodeEquality {
 
     it should "find all references inside a CastExpr" in {
         val x = ModuleId("Test", "x")
-        findDependencies(CastExpr(ValueReadExpr(x), Type.tString)) should be === Set(x)
+        findDependencies(CastExpr(ValueReadExpr(x), tString)) should be === Set(x)
     }
 
     it should "find all references inside a ErrorExpr" in {
@@ -189,7 +190,7 @@ class TapNodeUtilTests extends FlatSpec with TapNodeEquality {
         findDependencies(MatchExpr(ValueReadExpr(x), List(MatchCase(UnapplyNode(y, List.empty), Some(ValueReadExpr(z)), ValueReadExpr(w))))) should be === Set(x, y, z, w)
         findDependencies(LetExpr("x1", ValueReadExpr(x), ValueReadExpr(y))) should be === Set(x,y )
         findDependencies(FunctionExpr(Argument("a"), ValueReadExpr(x))) should be === Set(x)
-        findDependencies(CastExpr(ValueReadExpr(x), Type.tString)) should be === Set(x)
+        findDependencies(CastExpr(ValueReadExpr(x), tString)) should be === Set(x)
     }
 
     // ------------------------------------------------------------------------
@@ -249,6 +250,6 @@ class TapNodeUtilTests extends FlatSpec with TapNodeEquality {
     }
 
     it should "return all ids inside a CastExpr" in {
-        findLocalIds(CastExpr(ValueReadExpr(LocalId("x")), Type.tString)) should be === Set("x")
+        findLocalIds(CastExpr(ValueReadExpr(LocalId("x")), tString)) should be === Set("x")
     }
 }

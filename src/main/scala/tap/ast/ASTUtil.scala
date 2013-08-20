@@ -3,10 +3,10 @@ package tap.ast
 import annotation.tailrec
 import tap.{LocalId, ModuleId}
 import tap.types.Type._
+import tap.types.Natives._
 import tap.types._
 import tap.verifier.errors._
 import tap.types.kinds.{Kind, Kvar, KInfer}
-import tap.types.classes.{IsIn, Qual}
 import tap.types.inference.Substitutions.{nullSubst, Subst}
 import tap.util.ContextOps.withContext
 

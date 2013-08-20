@@ -4,6 +4,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers._
 import tap.ModuleId
 import tap.types._
+import tap.types.Natives._
 import tap.types.classes.ClassEnvironments._
 import tap.types.classes.{IsIn, TypeclassDef}
 import tap.types.inference.TIError
@@ -53,7 +54,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
         val id2 = idY
         val ce = addClass(nullEnv, TypeclassDef(id1, List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
         evaluating {
-            addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(Type.tString))), List(TVar("b", Star)), Set.empty, Set.empty))
+            addClass(ce, TypeclassDef(id2, List(IsIn(id1, List(tString))), List(TVar("b", Star)), Set.empty, Set.empty))
         } should produce [Error]
     }
 
@@ -73,7 +74,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
         val ps = List.empty
         val vs = List(TVar("a", Star))
         val ce1 = addClass(nullEnv, TypeclassDef(id, ps, vs, Set.empty, Set.empty))
-        val inst = Inst("Test", List.empty, IsIn(id, List(Type.tString)))
+        val inst = Inst("Test", List.empty, IsIn(id, List(tString)))
         val ce2 = addInst(ce1, inst)
         ce2 should be === Map(id -> (vs, ps, List(inst)))
     }
@@ -83,7 +84,7 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
         val ps = List.empty
         val vs = List(TVar("a", Star))
         val ce1 = addClass(nullEnv, TypeclassDef(id, ps, vs, Set.empty, Set.empty))
-        val inst = Inst("Test", List.empty, IsIn(id, List(Type.tString)))
+        val inst = Inst("Test", List.empty, IsIn(id, List(tString)))
         val ce2 = addInst(ce1, inst)
         evaluating { addInst(ce2, inst) } should produce [Error]
     }
@@ -149,8 +150,8 @@ class ClassEnvironmentsTests extends FlatSpec with TypeFixture {
     it should "return the instances of the specified class" in {
         val ce1 = addClass(nullEnv, TypeclassDef(ModuleId("Test","X"), List.empty, List(TVar("a", Star)), Set.empty, Set.empty))
         val ce2 = addClass(ce1, TypeclassDef(ModuleId("Test","Y"), List.empty, List(TVar("b", Star)), Set.empty, Set.empty))
-        val ce3 = addInst(ce2, Inst("Test", List.empty, IsIn(idY, List(Type.tString))))
+        val ce3 = addInst(ce2, Inst("Test", List.empty, IsIn(idY, List(tString))))
         insts(ce3, ModuleId("Test" ,"X")) should be === List.empty
-        insts(ce3, ModuleId("Test" ,"Y")) should be === List(Inst("Test", List.empty, IsIn(idY, List(Type.tString))))
+        insts(ce3, ModuleId("Test" ,"Y")) should be === List(Inst("Test", List.empty, IsIn(idY, List(tString))))
     }
  }

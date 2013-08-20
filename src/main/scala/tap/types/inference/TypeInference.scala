@@ -6,6 +6,7 @@ import tap.util.{trace, ContextOps}
 import ContextOps._
 import tap.ir._
 import tap.types.Type._
+import tap.types.Natives._
 import tap.types._
 import tap.types.classes.ClassEnvironments.ClassEnv
 import tap.types.classes.IsIn.{reduce, entail, split}

@@ -6,6 +6,7 @@ import tap.ast._
 import tap.ir.TapNode._
 import tap.ir._
 import tap.types.{TCon, Type}
+import tap.types.Natives._
 import tap.verifier.errors._
 import tap.{Id, LocalId, ModuleId}
 import test.TapNodeEquality
@@ -351,8 +352,8 @@ class TapNodeTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
     behavior of "fromAST for ASTCast"
 
     it should "produce a corresponding CastExpr" in {
-        val state = ResolveState(Map.empty, Map.empty, Set("a"), Map("String" -> ModuleId("Prelude", "String")), Map(ModuleId("Prelude", "String") -> Type.tString.asInstanceOf[TCon]))
+        val state = ResolveState(Map.empty, Map.empty, Set("a"), Map("String" -> ModuleId("Prelude", "String")), Map(ModuleId("Prelude", "String") -> tString.asInstanceOf[TCon]))
         fromAST(ASTCast(ASTValueRead("a"), ASTTypeCon("String")), state) should
-            equal(CastExpr(ValueReadExpr(LocalId("a")), Type.tString))
+            equal(CastExpr(ValueReadExpr(LocalId("a")), tString))
     }
 }

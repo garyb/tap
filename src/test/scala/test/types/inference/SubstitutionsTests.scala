@@ -4,6 +4,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers._
 import tap.types._
 import tap.types.Type._
+import tap.types.Natives._
 import tap.types.kinds._
 import tap.types.inference.Substitutions._
 import tap.ModuleId

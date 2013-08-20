@@ -3,7 +3,7 @@ package test.types.classes
 import org.scalatest.{GivenWhenThen, FlatSpec}
 import org.scalatest.matchers.ShouldMatchers._
 import tap.types.kinds._
-import tap.types.Type.{tString, tNumber, tBool}
+import tap.types.Natives._
 import tap.types.classes.{TypeclassDef, IsIn}
 import tap.types.classes.IsIn._
 import tap.types.classes.ClassEnvironments._

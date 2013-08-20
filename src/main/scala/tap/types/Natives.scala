@@ -8,16 +8,23 @@ import language.reflectiveCalls
 
 object Natives {
 
-    val `get!` = ModuleId("Prelude", "get!")
-    val `set!` = ModuleId("Prelude", "set!")
-    val `Num+Num` = InstId("Prelude", ModuleId("Prelude", "Plus"), List(getTConID(tNumber)), "+")
-    val `Num-Num` = InstId("Prelude", ModuleId("Prelude", "Num"), List(getTConID(tNumber)), "-")
-    val `Num/Num` = InstId("Prelude", ModuleId("Prelude", "Num"), List(getTConID(tNumber)), "/")
-    val `Num*Num` = InstId("Prelude", ModuleId("Prelude", "Num"), List(getTConID(tNumber)), "*")
-    val `Num%Num` = InstId("Prelude", ModuleId("Prelude", "Num"), List(getTConID(tNumber)), "mod")
-    val `-Num` = InstId("Prelude", ModuleId("Prelude", "Num"), List(getTConID(tNumber)), "negate")
-    val `String+String` = InstId("Prelude", ModuleId("Prelude", "Plus"), List(getTConID(tString)), "+")
-    val `write-to-console` = ModuleId("Prelude", "write-to-console")
+    val tArrow: Type  = TCon(ModuleId("Native", "->"), Kfun(Star, Kfun(Star, Star)))
+    val tNumber: Type = TCon(ModuleId("Native", "Number"), Star)
+    val tString: Type = TCon(ModuleId("Native", "String"), Star)
+    val tBool: Type   = TCon(ModuleId("Native", "Bool"), Star)
+    val tUnit: Type   = TCon(ModuleId("Native", "Unit"), Star)
+    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))._2
+
+    val `get!` = ModuleId("Native", "get!")
+    val `set!` = ModuleId("Native", "set!")
+    val `Num+Num` = InstId("Native", ModuleId("Native", "Plus"), List(getTConID(tNumber)), "+")
+    val `Num-Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "-")
+    val `Num/Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "/")
+    val `Num*Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "*")
+    val `Num%Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "mod")
+    val `-Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "negate")
+    val `String+String` = InstId("Native", ModuleId("Native", "Plus"), List(getTConID(tString)), "+")
+    val `write-to-console` = ModuleId("Native", "write-to-console")
     val `Num==Num` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(getTConID(tNumber)), "==")
     val `Num>Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tNumber)), ">")
     val `Num<Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tNumber)), "<")
@@ -29,8 +36,8 @@ object Natives {
 
     val types: Map[Id, Type] = Map(
 
-        `get!` -> (TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
-        `set!` -> (TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(ModuleId("Prelude", "Var"), Kfun(Star, Star)), TVar("a", Star)))),
+        `get!` -> (TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
+        `set!` -> (TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))),
 
         `Num+Num` -> (tNumber fn (tNumber fn tNumber)),
         `String+String` -> (tString fn (tString fn tString)),

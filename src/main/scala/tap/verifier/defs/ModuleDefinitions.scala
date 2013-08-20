@@ -1,7 +1,7 @@
 package tap.verifier.defs
 
 import tap.ir.TapExpr
-import tap.types.Type._
+import tap.types.Natives._
 import tap.types._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{Qual, TypeclassDef}

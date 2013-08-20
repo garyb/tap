@@ -4,6 +4,7 @@ import annotation.tailrec
 import tap.ir._
 import tap.ir.TapNodeUtil._
 import tap.types.Type._
+import tap.types.Natives._
 import tap.types._
 import tap.types.kinds._
 import tap.types.kinds.Kind._

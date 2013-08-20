@@ -8,13 +8,13 @@ import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.ModuleVerifier
 import tap.verifier.errors._
 import tap.types._
+import tap.types.Natives._
 import tap.types.kinds._
 import tap.types.classes.{Qual, IsIn, TypeclassDef}
 import tap.types.classes.ClassEnvironments.Inst
 import tap.ir._
 import language.reflectiveCalls
 import test.TapNodeEquality
-import tap.util.trace
 
 class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
@@ -27,7 +27,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         dcons = nullDefs.dcons ++ Map(ModuleId("Test", "X") -> TCon(ModuleId("Test", "X"), Star)),
         tcs = nullDefs.tcs ++ Map(ModuleId("Test", "Y") -> TypeclassDef(ModuleId("Test", "Y"), Nil, List(TVar("a", Star)), Set("yfn"), Set.empty),
             ModuleId("Test", "Y2") -> TypeclassDef(ModuleId("Test", "Y2"), Nil, List(TVar("a", Star), TVar("b", Star)), Set("yfn"), Set.empty)),
-        tcis = nullDefs.tcis ++ Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(Type.tString))))),
+        tcis = nullDefs.tcis ++ Map(ModuleId("Test", "Y") -> List(Inst("Test", Nil, IsIn(ModuleId("Test", "Y"), List(tString))))),
         mts = nullDefs.mts ++ Map(ModuleId("Test", "z") -> Qual(Nil, TCon(ModuleId("Test", "X"), Star)),
             ModuleId("Test", "yfn") -> Qual(List(IsIn(ModuleId("Test", "Y"), List(TVar("a", Star)))), TVar("a", Star) fn TVar("a", Star))),
         mis = nullDefs.mis ++ Map(ModuleId("Test", "z") -> ValueReadExpr(ModuleId("Test", "X")))

@@ -1,11 +1,11 @@
 package tap.types
 
 import tap.ModuleId
-import tap.types.kinds.{Kind, Kfun, Star}
+import tap.types.kinds.Kind
 import scala.annotation.tailrec
 import tap.types.inference.Substitutions
 import tap.types.inference.Substitutions.{nullSubst, Subst}
-import tap.util.PrettyPrint._
+import tap.types.Natives._
 import language.implicitConversions
 import language.reflectiveCalls
 
@@ -29,13 +29,6 @@ object Type {
      * Constructs a function type.
      */
     implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
-
-    val tArrow: Type  = TCon(ModuleId("Native", "->"), Kfun(Star, Kfun(Star, Star)))
-    val tNumber: Type = TCon(ModuleId("Native", "Number"), Star)
-    val tString: Type = TCon(ModuleId("Native", "String"), Star)
-    val tBool: Type   = TCon(ModuleId("Native", "Bool"), Star)
-    val tUnit: Type   = TCon(ModuleId("Native", "Unit"), Star)
-    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))._2
 
     /**
      * Finds the ID of a type constructor in the specified type. This should only be called when it is known the type
