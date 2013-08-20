@@ -5,14 +5,10 @@ import tap.interpreter.Interpreter._
 import tap.ir._
 import tap.{LocalId, ModuleId}
 import scala.collection.mutable.ArrayBuffer
-import tap.types.Type
+import tap.types.Natives._
 
 trait InterpreterFixture {
 
-    val idTrue = ModuleId("Prelude", "True")
-    val idFalse = ModuleId("Prelude", "False")
-    val idUnit = ModuleId("Prelude", "Unit")
-    val idVar = ModuleId("Prelude", "Var")
     val idTuple2 = ModuleId("Prelude.Tuple", "Tuple2")
     val idCons = ModuleId("Prelude", ":")
     val idEOL = ModuleId("Prelude", "EOL")
