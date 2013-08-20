@@ -1,10 +1,9 @@
 package tap.types
 
 import tap.types.Type._
-import tap.{InstId, ModuleId, Id}
+import tap.ModuleId
 import tap.types.kinds.{Kfun, Star}
 import language.reflectiveCalls
-
 
 object Natives {
 
@@ -31,26 +30,24 @@ object Natives {
     val `get!` = ModuleId("Native", "get!")
     val `set!` = ModuleId("Native", "set!")
 
-    val `Num+Num` = ModuleId("Native", "addNumNum")
-    val `Num-Num` = ModuleId("Native", "subNumNum")
-    val `Num/Num` = ModuleId("Native", "divNumNum")
-    val `Num*Num` = ModuleId("Native", "mulNumNum")
-    val `Num%Num` = ModuleId("Native", "modNumNum")
-    val `-Num`    = ModuleId("Native", "negateNum")
-
+    val `Num+Num`  = ModuleId("Native", "addNumNum")
+    val `Num-Num`  = ModuleId("Native", "subNumNum")
+    val `Num/Num`  = ModuleId("Native", "divNumNum")
+    val `Num*Num`  = ModuleId("Native", "mulNumNum")
+    val `Num%Num`  = ModuleId("Native", "modNumNum")
+    val `-Num`     = ModuleId("Native", "negateNum")
     val `Num==Num` = ModuleId("Native", "eqNumNum")
     val `Num>Num`  = ModuleId("Native", "gtNumNum")
     val `Num<Num`  = ModuleId("Native", "ltNumNum")
+    val `showNum`  = ModuleId("Native", "showNum")
+    val `readNum`  = ModuleId("Native", "readNum")
 
+    val `String+String`  = ModuleId("Native", "addStringString")
     val `String==String` = ModuleId("Native", "eqStringString")
     val `String>String`  = ModuleId("Native", "gtStringString")
     val `String<String`  = ModuleId("Native", "ltStringString")
 
-    val `String+String`    = ModuleId("Native", "addStringString")
     val `write-to-console` = ModuleId("Native", "write-to-console")
-
-    val `showNum` = ModuleId("Native", "showNum")
-    val `readNum` = ModuleId("Native", "readNum")
 
     val tcons: Map[ModuleId, TCon] = Map(
         idArrow -> tArrow,
@@ -73,27 +70,24 @@ object Natives {
         `get!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
         `set!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))),
 
-        `Num+Num` -> (tNumber fn (tNumber fn tNumber)),
-        `String+String` -> (tString fn (tString fn tString)),
-
-        `Num-Num` -> (tNumber fn (tNumber fn tNumber)),
-        `Num/Num` -> (tNumber fn (tNumber fn tNumber)),
-        `Num*Num` -> (tNumber fn (tNumber fn tNumber)),
-        `Num%Num` -> (tNumber fn (tNumber fn tNumber)),
-        `-Num` -> (tNumber fn tNumber),
-
-        `write-to-console` -> (tString fn tUnit),
-
+        `Num+Num`  -> (tNumber fn (tNumber fn tNumber)),
+        `Num-Num`  -> (tNumber fn (tNumber fn tNumber)),
+        `Num/Num`  -> (tNumber fn (tNumber fn tNumber)),
+        `Num*Num`  -> (tNumber fn (tNumber fn tNumber)),
+        `Num%Num`  -> (tNumber fn (tNumber fn tNumber)),
+        `-Num`     -> (tNumber fn tNumber),
         `Num==Num` -> (tNumber fn (tNumber fn tBool)),
+        `Num>Num`  -> (tNumber fn (tNumber fn tBool)),
+        `Num<Num`  -> (tNumber fn (tNumber fn tBool)),
+        `showNum`  -> (tNumber fn tString),
+        `readNum`  -> (tString fn tNumber),
+
+        `String+String`  -> (tString fn (tString fn tString)),
         `String==String` -> (tString fn (tString fn tBool)),
+        `String>String`  -> (tString fn (tString fn tBool)),
+        `String<String`  -> (tString fn (tString fn tBool)),
 
-        `Num>Num` -> (tNumber fn (tNumber fn tBool)),
-        `Num<Num` -> (tNumber fn (tNumber fn tBool)),
-        `String>String` -> (tString fn (tString fn tBool)),
-        `String<String` -> (tString fn (tString fn tBool)),
-
-        `showNum` -> (tNumber fn tString),
-        `readNum` -> (tString fn tNumber)
+        `write-to-console` -> (tString fn tUnit)
     )
 
     val dcons = types filter { id => Seq(idTrue, idFalse, idUnit, idVar) contains id }
