@@ -30,22 +30,27 @@ object Natives {
 
     val `get!` = ModuleId("Native", "get!")
     val `set!` = ModuleId("Native", "set!")
-    val `Num+Num` = InstId("Native", ModuleId("Native", "Plus"), List(idNumber), "+")
-    val `Num-Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "-")
-    val `Num/Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "/")
-    val `Num*Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "*")
-    val `Num%Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "mod")
-    val `-Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "negate")
-    val `String+String` = InstId("Native", ModuleId("Native", "Plus"), List(idString), "+")
+
+    val `Num+Num` = ModuleId("Native", "addNumNum")
+    val `Num-Num` = ModuleId("Native", "subNumNum")
+    val `Num/Num` = ModuleId("Native", "divNumNum")
+    val `Num*Num` = ModuleId("Native", "mulNumNum")
+    val `Num%Num` = ModuleId("Native", "modNumNum")
+    val `-Num`    = ModuleId("Native", "negateNum")
+
+    val `Num==Num` = ModuleId("Native", "eqNumNum")
+    val `Num>Num`  = ModuleId("Native", "gtNumNum")
+    val `Num<Num`  = ModuleId("Native", "ltNumNum")
+
+    val `String==String` = ModuleId("Native", "eqStringString")
+    val `String>String`  = ModuleId("Native", "gtStringString")
+    val `String<String`  = ModuleId("Native", "ltStringString")
+
+    val `String+String`    = ModuleId("Native", "addStringString")
     val `write-to-console` = ModuleId("Native", "write-to-console")
-    val `Num==Num` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(idNumber), "==")
-    val `Num>Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idNumber), ">")
-    val `Num<Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idNumber), "<")
-    val `String==String` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(idString), "==")
-    val `String>String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idString), ">")
-    val `String<String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idString), "<")
-    val `showNum` = InstId("Text.Show", ModuleId("Text.Show", "Show"), List(idNumber), "show")
-    val `readNum` = InstId("Text.Read", ModuleId("Text.Read", "Read"), List(idNumber), "read")
+
+    val `showNum` = ModuleId("Native", "showNum")
+    val `readNum` = ModuleId("Native", "readNum")
 
     val tcons: Map[ModuleId, TCon] = Map(
         idArrow -> tArrow,
@@ -63,7 +68,7 @@ object Natives {
 
         idVar -> Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))._2,
 
-        idUnit -> tUnit/*,
+        idUnit -> tUnit,
 
         `get!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
         `set!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))),
@@ -88,7 +93,7 @@ object Natives {
         `String<String` -> (tString fn (tString fn tBool)),
 
         `showNum` -> (tNumber fn tString),
-        `readNum` -> (tString fn tNumber)*/
+        `readNum` -> (tString fn tNumber)
     )
 
     val dcons = types filter { id => Seq(idTrue, idFalse, idUnit, idVar) contains id }
