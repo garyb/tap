@@ -8,36 +8,47 @@ import language.reflectiveCalls
 
 object Natives {
 
-    val tArrow: Type  = TCon(ModuleId("Native", "->"), Kfun(Star, Kfun(Star, Star)))
-    val tNumber: Type = TCon(ModuleId("Native", "Number"), Star)
-    val tString: Type = TCon(ModuleId("Native", "String"), Star)
-    val tBool: Type   = TCon(ModuleId("Native", "Bool"), Star)
-    val tUnit: Type   = TCon(ModuleId("Native", "Unit"), Star)
-    val tVar: Type    = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))._2
+    val idArrow = ModuleId("Native", "->")
+    val tArrow: Type = TCon(idArrow, Kfun(Star, Kfun(Star, Star)))
+
+    val idNumber = ModuleId("Native", "Number")
+    val tNumber: Type = TCon(idNumber, Star)
+
+    val idString = ModuleId("Native", "String")
+    val tString: Type = TCon(idString, Star)
+
+    val idBool = ModuleId("Native", "Bool")
+    val tBool: Type = TCon(idBool, Star)
+
+    val idUnit = ModuleId("Native", "Unit")
+    val tUnit: Type = TCon(idUnit, Star)
+
+    val idVar = ModuleId("Native", "Var")
+    val tVar = Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))._2
 
     val `get!` = ModuleId("Native", "get!")
     val `set!` = ModuleId("Native", "set!")
-    val `Num+Num` = InstId("Native", ModuleId("Native", "Plus"), List(getTConID(tNumber)), "+")
-    val `Num-Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "-")
-    val `Num/Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "/")
-    val `Num*Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "*")
-    val `Num%Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "mod")
-    val `-Num` = InstId("Native", ModuleId("Native", "Num"), List(getTConID(tNumber)), "negate")
-    val `String+String` = InstId("Native", ModuleId("Native", "Plus"), List(getTConID(tString)), "+")
+    val `Num+Num` = InstId("Native", ModuleId("Native", "Plus"), List(idNumber), "+")
+    val `Num-Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "-")
+    val `Num/Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "/")
+    val `Num*Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "*")
+    val `Num%Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "mod")
+    val `-Num` = InstId("Native", ModuleId("Native", "Num"), List(idNumber), "negate")
+    val `String+String` = InstId("Native", ModuleId("Native", "Plus"), List(idString), "+")
     val `write-to-console` = ModuleId("Native", "write-to-console")
-    val `Num==Num` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(getTConID(tNumber)), "==")
-    val `Num>Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tNumber)), ">")
-    val `Num<Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tNumber)), "<")
-    val `String==String` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(getTConID(tString)), "==")
-    val `String>String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tString)), ">")
-    val `String<String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(getTConID(tString)), "<")
-    val `showNum` = InstId("Text.Show", ModuleId("Text.Show", "Show"), List(getTConID(tNumber)), "show")
-    val `readNum` = InstId("Text.Read", ModuleId("Text.Read", "Read"), List(getTConID(tNumber)), "read")
+    val `Num==Num` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(idNumber), "==")
+    val `Num>Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idNumber), ">")
+    val `Num<Num` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idNumber), "<")
+    val `String==String` = InstId("Data.Eq", ModuleId("Data.Eq", "Eq"), List(idString), "==")
+    val `String>String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idString), ">")
+    val `String<String` = InstId("Data.Ord", ModuleId("Data.Ord", "Ord"), List(idString), "<")
+    val `showNum` = InstId("Text.Show", ModuleId("Text.Show", "Show"), List(idNumber), "show")
+    val `readNum` = InstId("Text.Read", ModuleId("Text.Read", "Read"), List(idNumber), "read")
 
     val types: Map[Id, Type] = Map(
 
-        `get!` -> (TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
-        `set!` -> (TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(ModuleId("Native", "Var"), Kfun(Star, Star)), TVar("a", Star)))),
+        `get!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn TVar("a", Star)),
+        `set!` -> (TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)) fn (TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))),
 
         `Num+Num` -> (tNumber fn (tNumber fn tNumber)),
         `String+String` -> (tString fn (tString fn tString)),
