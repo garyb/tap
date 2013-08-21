@@ -34,7 +34,7 @@ object Interpreter {
 
         case MatchExpr(expr, cases) => evalCases(cases, eval(expr, scope), scope)
         case LetExpr(name, value, inner) => eval(inner, scope + (LocalId(name) -> eval(value, scope)))
-        case ValueReadExpr(id @ ModuleId("Native", _)) => INative(InterpreterNatives.natives(id))
+        case ValueReadExpr(id @ ModuleId("Native", _)) => InterpreterNatives.natives(id)
         case ValueReadExpr(ref) => scope(ref)
         case fn: FunctionExpr => IFunctionExpr(fn, scope)
         case CastExpr(value, _) => eval(value, scope)
