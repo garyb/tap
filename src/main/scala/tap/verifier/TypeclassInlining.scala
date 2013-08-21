@@ -10,9 +10,8 @@ import tap.types.kinds._
 import tap.types.kinds.Kind._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{TypeclassDef, Qual, IsIn}
-import tap.types.inference.TypeInference.{freshInst, freshInstPartial}
 import tap.types.inference.Substitutions.{applySubst, Subst}
-import tap.types.inference.Substitutions
+import tap.types.inference.{TIEnv, Substitutions}
 import tap.util._
 import tap.util.ContextOps._
 import tap.util.PrettyPrint._
@@ -28,13 +27,8 @@ import language.reflectiveCalls
  *        before return types in the case of `read`, etc.
  *
  * @param defs The definitions to rewrite.
- * @param ets A map of types for each expression before the final substitutions were applied. This is necessary to
- *            determine the position of arguments when rewriting functions - if the type variables are replaced with
- *            concrete types it is impossible to tell from the function arguments at what point the type variables were
- *            satisfied with the types.
- * @param s The final substitutions.
  */
-class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], s: Subst)
+class TypeclassInlining(defs: ModuleDefinitions, initEnv: TIEnv)
 {
     val tcs = defs.tcs
 
@@ -44,13 +38,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
     type ExprTypes = Map[TapNode, Qual[Type]]
     type TCInstMembers = Map[InstId, ModuleId]
 
-    case class Context(tcTcons: TCons, tcDcons: DCons, tcInstNames: Map[Inst, ModuleId], tcInstMembers: TCInstMembers, tcDefaultMembers: Map[ModuleId, ModuleId], ets: ExprTypes) {
-
-        /**
-         * Creates a new context object with an updated expression type mapping with the specified node and type.
-         */
-        def setExprType[E <: TapNode](e: E, t: Type): (Context, E) =
-            (Context(tcTcons, tcDcons, tcInstNames, tcInstMembers, tcDefaultMembers, ets + (e -> Qual(Nil, t))), e)
+    case class Context(env: TIEnv, tcTcons: TCons, tcDcons: DCons, tcInstNames: Map[Inst, ModuleId], tcInstMembers: TCInstMembers, tcDefaultMembers: Map[ModuleId, ModuleId]) {
 
         /**
          * Takes an expression that is chain of applications and a type for the function at the bottom of the chain, and
@@ -100,6 +88,12 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
          * Finds the remapped name of a typeclass instance based on a typeclass ID and a list of type arguments.
          */
         def getInstName(tcId: Id, pArgs: List[Id]): ModuleId = tcInstNames(getInst(tcId, pArgs))
+
+        private def withEnv[A](next: (TIEnv, A)) = (copy(env = next._1), next._2)
+        def freshInst(s: Qual[Type]): (Context, Qual[Type]) = withEnv(env.freshInst(s))
+        def freshInst(s: Type): (Context, Type) = withEnv(env.freshInst(s))
+        def freshInstPartial(ts0: List[Type], s: Type): (Context, Type) = withEnv(env.freshInstPartial(ts0, s))
+        def setExprType[E <: TapNode](e: E, t: Type): (Context, E) = (copy(env = env.setNodeType(e, t)), e)
     }
 
     /**
@@ -109,12 +103,12 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
         def map2[B](fn: A => B): List[List[B]] = xss map { xs => xs map fn }
     }
 
-    def apply() = {
+    def apply(): (TIEnv, SimpleDefinitions) = {
 
         val memberIds = defs.mts.keySet
 
         trace("\nTypeclass data constructors:\n--------------------------------------------------------------------------------")
-        val (tcTcons, tcDcons) = createTypeclassDatatypes(defs.tcons.keySet, defs.mts)
+        val (env1, tcTcons, tcDcons) = createTypeclassDatatypes(initEnv, defs.tcons.keySet, defs.mts)
         for ((id, (dconId, dcon)) <- tcDcons) trace(prettyPrint(dconId), "::", prettyPrint(dcon))
 
         trace("\nTypeclass instance naming:\n--------------------------------------------------------------------------------")
@@ -132,9 +126,9 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
         for ((oid, nid) <- tcInstImplNames) trace(prettyPrint(oid), "=>", prettyPrint(nid))
 
         trace("\nTypeclass stub implementations:\n--------------------------------------------------------------------------------")
-        val (ctx1, tcStubImpls) = createTypeclassStubImplementations(tcs.values.toList, defs.mts, Context(tcTcons, tcDcons, tcInstNames, tcInstImplNames, tcDefaultImplNames, ets), Map.empty)
+        val (ctx1, tcStubImpls) = createTypeclassStubImplementations(tcs.values.toList, defs.mts, Context(env1, tcTcons, tcDcons, tcInstNames, tcInstImplNames, tcDefaultImplNames), Map.empty)
         for ((id, fn) <- tcStubImpls) {
-            val t = ctx1.ets(fn)
+            val t = ctx1.env.ets(fn)
             trace()
             trace(id, "::", prettyPrint(t))
             trace(" " * id.toString.length, "  ", prettyPrint(fn))
@@ -144,7 +138,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
         val (ctx2, tcInsts) = createTypeclassInstances(defs.tcis.values.flatten.toList, ctx1)
         for ((id, fn) <- tcInsts) {
             trace()
-            trace(id, "::", prettyPrint(ctx2.ets(fn)))
+            trace(id, "::", prettyPrint(ctx2.env.ets(fn)))
             trace(" " * id.toString.length, "  ", prettyPrint(fn))
         }
 
@@ -152,7 +146,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
         val (ctx3, impls) = rewriteMemberImplementations(defs.mis, tcDefaultImplNames, tcInstImplNames, ctx2)
         for ((id, fn) <- impls.toList.sortBy { case (id, e) => prettyPrint(e) }) {
             trace()
-            trace(id, "::", prettyPrint(applySubst(s, ctx3.ets(fn))))
+            trace(id, "::", prettyPrint(applySubst(ctx3.env.s, ctx3.env.ets(fn))))
             trace(" " * id.toString.length, "  ", prettyPrint(fn))
         }
 
@@ -165,11 +159,11 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 if (qt.ps.nonEmpty) throw new Error("ets still contains qualified type: " + prettyPrint(qt) + " for " + prettyPrint(node))
                 node -> qt.h
             })*/
-        SimpleDefinitions(
+        (ctx3.env, SimpleDefinitions(
             Map.empty,
             Map.empty,
             Map.empty,
-            Map.empty)
+            Map.empty))
     }
 
     /**
@@ -186,10 +180,10 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
     /**
      * Creates type constructors and data constructors for typeclasses.
      */
-    def createTypeclassDatatypes(reservedIds: Set[ModuleId], mts: Map[Id, Qual[Type]]): (TCons, DCons) = {
+    def createTypeclassDatatypes(env: TIEnv, reservedIds: Set[ModuleId], mts: Map[Id, Qual[Type]]): (TIEnv, TCons, DCons) = {
 
-        @tailrec def loop(xs: List[TypeclassDef], tcons: TCons, dcons: DCons): (TCons, DCons) = xs match {
-            case List() => (tcons, dcons)
+        @tailrec def loop(env: TIEnv, xs: List[TypeclassDef], tcons: TCons, dcons: DCons): (TIEnv, TCons, DCons) = xs match {
+            case List() => (env, tcons, dcons)
             case TypeclassDef(msn @ ModuleId(mId, name), ps, vs, memberIds, _) :: xs =>
 
                 // Generate a name for the type constructor, ensuring we don't overwrite anything that already exists
@@ -200,12 +194,12 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 val scs = ps map { p => predToType(p, tcons) }
 
                 // Generate argument types for the members
-                val tcmts = memberIds.toList map { m =>
+                val (env1, tcmts) = env.map(memberIds.toList) { (env, m) =>
                     val sc = mts(ModuleId(mId, m))
                     if (sc.ps(0).id != msn) throw new Error("Typeclass member incorrect predicate found - " + m + " :: " + prettyPrint(sc))
-                    val qt = freshInstPartial(vs, sc)
+                    val (env1, qt) = env.freshInstPartial(vs, sc)
                     val tvs = Qual.tv(qt) filterNot { tv => vs contains tv }
-                    if (tvs.nonEmpty) Qual.quantify(tvs, qt)._2.h else qt.h
+                    (env1, if (tvs.nonEmpty) Qual.quantify(tvs, qt)._2.h else qt.h)
                 }
 
                 // Build the type constructor for the typeclass
@@ -225,13 +219,13 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 trace("-", prettyPrint(dcon))
                 trace("-", prettyPrint(sc._2))
 
-                loop(xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc._2)))
+                loop(env1, xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc._2)))
         }
 
         // Loop through the typeclasses in dependency order
         val tcDeps = tcs mapValues { tc => tc.ps map { p => p.id } }
         val tcOrd = Graph.tsort(tcDeps) map { k => k -> tcs(k) }
-        loop(tcOrd map { _._2 }, Map.empty, Map.empty)
+        loop(env, tcOrd map { _._2 }, Map.empty, Map.empty)
     }
 
     /**
@@ -305,8 +299,8 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
             val (ctx1, members1) = ctx.map(members.toList) { (ctx, m) =>
 
                 val sc = mts(ModuleId(mId, m))
-                val qt = freshInst(sc)
-                val argMods = findPredicateArgs(qt)
+                val (ctx1, qt) = ctx.freshInst(sc)
+                val argMods = findPredicateArgs(ctx1.env.s, qt)
                 val tcIndex = argMods indexWhere { ps => ps.nonEmpty }
 
                 // TODO: need to call setExprType for all generated exprs, not just the outmost one
@@ -327,11 +321,11 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                         MatchExpr(ValueReadExpr(LocalId(tcId)), cs)
                 }
 
-                val t = interleavePredicateArgTypes(qt.h, argMods, ctx.tcTcons)
+                val t = interleavePredicateArgTypes(ctx1.env.s, qt.h, argMods, ctx1.tcTcons)
                 val fn = makeTypeclassMember(t, 0, Nil)
                 val id = ModuleId(mId, m)
-                val (ctx1, _) = ctx.setExprType(fn, t)
-                (ctx1, (id -> fn))
+                val (ctx2, _) = ctx1.setExprType(fn, t)
+                (ctx2, id -> fn)
             }
             createTypeclassStubImplementations(xs, mts, ctx1, result ++ members1)
     }
@@ -357,9 +351,10 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                     predToVal(Substitutions.applySubst(s, p), ctx, predIds)
                 }
 
-                val typeArgs = getFunctionTypeArgs(freshInst(dconType)).drop(tc.ps.length)
-                val memberDefs = (tc.members.toList zip typeArgs)
-                val (ctx2, memberArgs) = ctx1.map(memberDefs.toList) { case (ctx, (memberId, t)) =>
+                val (ctx2, dt) = ctx1.freshInst(dconType)
+                val typeArgs = getFunctionTypeArgs(dt).drop(tc.ps.length)
+                val memberDefs = tc.members.toList zip typeArgs
+                val (ctx3, memberArgs) = ctx2.map(memberDefs.toList) { case (ctx, (memberId, t)) =>
                     ctx.tcInstMembers.get(InstId(mId, tcId, paramNames, memberId)) match {
                         case Some(m) =>
                             // Instance members need the instance context passing to them
@@ -385,9 +380,9 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 // TODO: set types
                 val f = makeApply(ValueReadExpr(dconId), superArgs ++ memberArgs)
                 val e = makeFunc(predIds.values.toList map { id => Argument(id) }, f)
-                val (ctx3, _) = ctx2.setExprType(e, predToType(p, ctx.tcTcons))
+                val (ctx4, _) = ctx3.setExprType(e, predToType(p, ctx.tcTcons))
 
-                loop(xs, ctx3, result + (id -> e))
+                loop(xs, ctx4, result + (id -> e))
         }
 
         loop(xs, ctx, Map.empty)
@@ -410,7 +405,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
     }
 
     def rewriteInstanceMember(expr: TapExpr, ctx: Context): (Context, TapExpr) = {
-        val t0 = ctx.ets(expr)
+        val t0 = ctx.env.ets(expr)
         expr match {
 
             case f @ FunctionExpr(arg, body) if t0.ps.nonEmpty =>
@@ -434,13 +429,13 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
     }
 
     def rewriteMember(expr: TapExpr, ctx: Context): (Context, TapExpr) = {
-        val t0 = ctx.ets(expr)
+        val t0 = ctx.env.ets(expr)
         expr match {
 
             // A value read at the definition level means we're just giving an alternate name to an existing
             // definition, so no need to rewrite - that will be handled at the value the definition is pointing to.
             case expr: ValueReadExpr if t0.ps.nonEmpty =>
-                ctx.setExprType(expr, interleavePredicateArgTypes(t0.h, findPredicateArgs(t0), ctx.tcTcons))
+                ctx.setExprType(expr, interleavePredicateArgTypes(ctx.env.s, t0.h, findPredicateArgs(ctx.env.s, t0), ctx.tcTcons))
 
             case expr => rewriteExpr(expr, ctx, Map.empty)
         }
@@ -451,7 +446,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
      * implementations.
      */
     def rewriteExpr(expr: TapExpr, ctx: Context, predIds: Map[IsIn, String]): (Context, TapExpr) = {
-        val t0 = ctx.ets(expr)
+        val t0 = ctx.env.ets(expr)
         expr match {
 
             // Rewriting an apply where the value being applied is predicated is a special case: the arguments that
@@ -459,18 +454,18 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
             // to the function
             case a @ ApplyExpr(f, e) if isPredicatedFunc(a, ctx) =>
                 val fn = getAppliedFunc(a)
-                val ft = ctx.ets(fn)
-                val argMods = findPredicateArgs(ft)
-                val ft1 = interleavePredicateArgTypes(ft.h, argMods, ctx.tcTcons)
+                val ft = ctx.env.ets(fn)
+                val argMods = findPredicateArgs(ctx.env.s, ft)
+                val ft1 = interleavePredicateArgTypes(ctx.env.s, ft.h, argMods, ctx.tcTcons)
                 interleavePredicateArgVals(fn, getApplyArgs(a), argMods, ctx, predIds, ft1)
 
             // A value-read with predicates is treated similarly to applying a predicated function - the predicates
             // here are required to determine the return type of the expression. Occurs in cases when values like
             // mempty (from Monoid) or mzero (from MonadPlus) are referenced.
             case _: ValueReadExpr if t0.ps.nonEmpty =>
-                val argMods = findPredicateArgs(t0)
+                val argMods = findPredicateArgs(ctx.env.s, t0)
                 if (argMods.tail.flatten.nonEmpty) throw new Error("ValueReadExpr that has argMods that need interleaving?")
-                val t1 = interleavePredicateArgTypes(t0.h, argMods, ctx.tcTcons)
+                val t1 = interleavePredicateArgTypes(ctx.env.s, t0.h, argMods, ctx.tcTcons)
                 interleavePredicateArgVals(expr, Nil, List(argMods.head), ctx, predIds, t1)
 
             // For all other predicated expressions eta-abstraction is used to capture the typeclass implementation
@@ -483,12 +478,12 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                 val argIds = List.range(0, numArgs) map { i => IDUtil.makeAlphabeticId(i, reservedIds) }
                 val reservedIds1 = reservedIds ++ argIds
                 val predIds1 = predIds ++ (t0.ps map { p => p -> predToArgName(p, reservedIds1) })
-                val argMods = findPredicateArgs(t0)
+                val argMods = findPredicateArgs(ctx.env.s, t0)
                 argMods.drop(numArgs + 1) foreach { ps => if (ps.nonEmpty) throw new Error("Unexpected argMods") }
                 val (ctx1, e1) = rewriteExpr(expr, ctx.setExprType(expr, t0.h)._1, predIds1)
-                val (ctx2, e2) = ctx1.setApplyTypes(makeApply(e1, argIds map { id => ValueReadExpr(LocalId(id)) }), applySubst(s, t0.h))
+                val (ctx2, e2) = ctx1.setApplyTypes(makeApply(e1, argIds map { id => ValueReadExpr(LocalId(id)) }), applySubst(ctx1.env.s, t0.h))
                 val newArgs = applyMods(argMods map2 { p => Argument(predIds1(p)) }, argIds map { id => Argument(id) })
-                ctx2.setFunctionTypes(makeFunc(newArgs, e2), interleavePredicateArgTypes(t0.h, argMods, ctx.tcTcons))
+                ctx2.setFunctionTypes(makeFunc(newArgs, e2), interleavePredicateArgTypes(ctx2.env.s, t0.h, argMods, ctx2.tcTcons))
 
             case a @ ApplyExpr(f, e) =>
                 val (ctx1, f1) = rewriteExpr(f, ctx, predIds)
@@ -539,7 +534,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
      * Checks whether a function at the bottom of a chain of applications has predicates.
      */
     def isPredicatedFunc(ap: ApplyExpr, ctx: Context): Boolean =
-        ctx.ets(getAppliedFunc(ap)).ps.nonEmpty
+        ctx.env.ets(getAppliedFunc(ap)).ps.nonEmpty
 
     /**
      * Finds the type for a predicate, using the specified (typeclass -> type constructor) mapping.
@@ -615,12 +610,13 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
                     val (dconId, dcon) = ctx.tcDcons(tc.name)
                     // TODO: this is wrong, comes out as: (TestBits.TCBase Prelude.Number)
                     //                     but should be: (TestBits.TCBase µ9)
-                    val argTypes = getFunctionTypeArgs(freshInstPartial(x.ts, dcon))
+                    val (ctx1, ft) = ctx.freshInstPartial(x.ts, dcon)
+                    val argTypes = getFunctionTypeArgs(ft)
                     trace("-", prettyPrint(dconId))
                     trace(argTypes map prettyPrint mkString "\n")
                     // TODO: grab DCon for type, freshInst it and use it to set type of all wildcard args
-                    val (ctx1, ua) = ctx.setExprType(UnapplyNode(dconId, args), predToType(x, ctx.tcTcons))
-                    makeUnapply(xs, x, ua, ctx1)
+                    val (ctx2, ua) = ctx.setExprType(UnapplyNode(dconId, args), predToType(x, ctx1.tcTcons))
+                    makeUnapply(xs, x, ua, ctx2)
             }
 
             if (curr.id == target.id) (ctx, tv)
@@ -678,7 +674,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
      * result is a list of lists, the outer list corresponds to argument indicies, and the inner lists are the
      * predicates that are decided by that argument.
      */
-    def findPredicateArgs(qt: Qual[Type]): List[List[IsIn]] = qt match {
+    def findPredicateArgs(s: Subst, qt: Qual[Type]): List[List[IsIn]] = qt match {
         case Qual(Seq(), t) => Nil
         case Qual(ps, t) =>
 
@@ -723,7 +719,7 @@ class TypeclassInlining(defs: ModuleDefinitions, ets: Map[TapNode, Qual[Type]], 
      * Transforms a function type to insert arguments at the specified slots. The indices of items in the argMods array
      * corresponds with the position of the argument at which the new arguments will be inserted at.
      */
-    def interleavePredicateArgTypes(t: Type, argMods: List[List[IsIn]], tcTcons: TCons): Type = {
+    def interleavePredicateArgTypes(s: Subst, t: Type, argMods: List[List[IsIn]], tcTcons: TCons): Type = {
         val ts = getFunctionTypes(t)
         val argMods1 = argMods map2 { p => predToType(p, tcTcons) }
         applySubst(s, makeFunctionType(applyMods(argMods1, ts.init), ts.last))

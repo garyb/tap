@@ -6,13 +6,13 @@ import tap.ir._
 import tap.types.Type._
 import tap.types.classes.ClassEnvironments.{ClassEnv, Inst}
 import tap.types.classes._
-import tap.types.inference.Substitutions.Subst
-import tap.types.inference.TypeInference.ExprTypeMap
-import tap.types.inference.TypeInference
+import tap.types.inference.{TIEnv, TypeInference}
 import tap.util.Graph
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.types.{Forall, Type}
 import tap.util.PrettyPrint._
+import tap.util.ContextOps._
+import language.reflectiveCalls
 
 class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, DefinitionsLookup], val dependencies: Map[String, Set[String]]) {
 
@@ -21,7 +21,7 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
     type Impl = Id
     type ImplGrps = List[Seq[Impl]]
 
-    def apply(defs: ModuleDefinitions): (ModuleDefinitions, Subst, ExprTypeMap) = {
+    def apply(ctx: TIEnv, defs: ModuleDefinitions): (TIEnv, ModuleDefinitions) = {
 
         val moduleIds = modules map { m => m.name }
 
@@ -33,9 +33,9 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
 
         // ---[ member binding groups ] -------------------------------------------------------------------------------
 
-        val bindGroups = resolveBindingGroups(mis, defs.mts) map { case (expls, impls) =>
-            (expls map { m =>
-                val t = m match {
+        val (ctx1, bindGroups) = ctx.map(resolveBindingGroups(mis, defs.mts)) { case (ctx, (expls, impls)) =>
+            val (ctx1, expls1) = ctx.map(expls) { (ctx, m) =>
+                val (ctx1, t) = m match {
                     case InstId(mId, tcId, ps, id) =>
                         val tc = defs.tcs(tcId)
                         val tci = defs.tcis(tcId) find { case Inst(_, _, IsIn(_, tciPs)) =>
@@ -44,11 +44,12 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
                             case Some(tci) => tci
                             case None => throw new Error("Unable to find appropriate instance for " + tc + " with params " + ps)
                         }
-                        makeInstanceMemberType(defs.mts(ModuleId(tc.name.mId, id)), tci)
-                    case qId => defs.mts(qId)
+                        makeInstanceMemberType(ctx, defs.mts(ModuleId(tc.name.mId, id)), tci)
+                    case qId => (ctx, defs.mts(qId))
                 }
-                (m, t, mis(m)) },
-            impls map { l => l.map { m => (m, mis(m)) }.toList })
+                (ctx1, (m, t, mis(m)))
+            }
+            (ctx1, (expls1, impls map { l => l.map { m => (m, mis(m)) }.toList }))
         }
 
         // ---[ class environments ] ----------------------------------------------------------------------------------
@@ -58,9 +59,9 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
         // ---[ type inference ] --------------------------------------------------------------------------------------
 
         val as = (defs.dcons mapValues { dcon => Qual(Nil, dcon) }) ++ defs.mts
-        val (as2, s, ets) = TypeInference.tiProgram(ces(modules(0).name), as, bindGroups)
+        val (as2, ctx2) = TypeInference.tiProgram(ces(modules(0).name), as, ctx1, bindGroups)
         val infmts = as2.collect { case (id, t) if !defs.mts.contains(id) => id -> t }
-        (defs.copy(mts = defs.mts ++ infmts, mis = defs.mis ++ mis), s, ets)
+        (ctx2, defs.copy(mts = defs.mts ++ infmts, mis = defs.mis ++ mis))
     }
 
     /**
@@ -69,11 +70,11 @@ class ModuleTypeInference(val modules: Seq[ASTModule], val scopes: Map[String, D
      * @param tci The typeclass instance.
      * @return The instantiated type.
      */
-    def makeInstanceMemberType(sc: Qual[Type], tci: Inst): Qual[Type] = sc.h match {
+    def makeInstanceMemberType(ctx: TIEnv, sc: Qual[Type], tci: Inst): (TIEnv, Qual[Type]) = sc.h match {
         case t: Forall =>
             if (sc.ps(0).id != tci.tc.id) throw new Error("Cannot instantiate type " + prettyPrint(sc) + " with class " + prettyPrint(tci))
             if (tci.tc.ts.length != t.ks.length) throw new Error("Type parameter mismatch count for " + prettyPrint(tci) + " instantiating " + prettyPrint(sc))
-            TypeInference.freshInstPartial(tci.tc.ts, sc)
+            ctx.freshInstPartial(tci.tc.ts, sc)
         case _ => throw new Error("makeInstanceMemberType called on non-Forall type " + prettyPrint(sc))
     }
 

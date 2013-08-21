@@ -21,10 +21,10 @@ object FilesVerifier {
             }
         }
 
-        val (ord, defs, types, subst) = ProgramVerifier(asts)
+        val (env, ord, defs) = ProgramVerifier(asts)
 
-        val tci = new TypeclassInlining(defs, types, subst)
-        tci()
-        (ord, defs, types)
+        val tci = new TypeclassInlining(defs, env)
+        val (env1, _) = tci()
+        (ord, defs, env1.ets)
     }
 }

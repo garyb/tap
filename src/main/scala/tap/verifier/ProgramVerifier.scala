@@ -28,13 +28,14 @@ import tap.ast.ASTModuleExport
 import tap.verifier.errors.ModuleMissingImportsError
 import tap.ast.ASTClass
 import tap.ast.ASTLet
+import tap.types.inference.TIEnv
 
 object ProgramVerifier {
 
     type Modules = Map[String, ASTModule]
     type Imports = Map[String, Set[ASTImport]]
 
-    def apply(asts: Modules): (List[List[String]], ModuleDefinitions, Map[TapNode, Qual[Type]], Subst) = {
+    def apply(asts: Modules): (TIEnv, List[List[String]], ModuleDefinitions) = {
 
         val imports = asts mapValues findImports
         val deps = findModuleDependencies(asts, imports)
@@ -49,8 +50,8 @@ object ProgramVerifier {
 
         // Iterate through the grouped modules and run the verifier on each group, building up the list of all
         // module-scoped definitions in the program
-        val defs = ord.foldLeft((ModuleDefinitions.defaults, Map.empty[TapNode, Qual[Type]], Map.empty: Subst)) {
-            case ((defs0, ets0, s0), moduleGroup) =>
+        val (env, defs) = ord.foldLeft((TIEnv.empty, ModuleDefinitions.defaults)) {
+            case ((env, defs), moduleGroup) =>
                 if (moduleGroup.length == 1) trace("Resolving module", moduleGroup(0))
                 else trace("Resolving module group", moduleGroup.mkString(", "))
                 val scopeMap = (moduleGroup map { id => id -> scopeMaps(id) }).toMap
@@ -58,11 +59,11 @@ object ProgramVerifier {
                 val modules = moduleGroup map { id => asts(id) }
                 val verifier = new ModuleVerifier(scopeMap)
                 val typechecker = new ModuleTypeInference(modules, scopeMap, moduleDeps)
-                val (defs1, s1, ets1) = typechecker(verifier(modules, defs0))
-                (defs1, ets0 ++ ets1, s0 ++ s1)
+                val (env1, defs1) = typechecker(env, verifier(modules, defs))
+                (env1, defs1)
         }
 
-        (ord, defs._1, defs._2, defs._3)
+        (env, ord, defs)
     }
 
     /**

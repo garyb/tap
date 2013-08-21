@@ -12,6 +12,7 @@ import language.reflectiveCalls
 import tap.types.classes.ClassEnvironments._
 import tap.verifier.ModuleTypeInference
 import tap.ir._
+import tap.types.inference.TIEnv
 
 class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
 
@@ -27,7 +28,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
         val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "NotShow"), List(tNumber)))
         val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
         evaluating {
-            mti.makeInstanceMemberType(sc, tci)
+            mti.makeInstanceMemberType(TIEnv.empty, sc, tci)
         } should produce [Error]
     }
 
@@ -36,7 +37,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
         val tci = Inst("Test", Nil, IsIn(ModuleId("Prelude", "Show"), List(tNumber)))
         val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
         evaluating {
-            mti.makeInstanceMemberType(sc, tci)
+            mti.makeInstanceMemberType(TIEnv.empty, sc, tci)
         } should produce [Error]
     }
 
@@ -46,7 +47,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
             val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
             val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString)))
             val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
-            mti.makeInstanceMemberType(sc, tci)
+            mti.makeInstanceMemberType(TIEnv.empty, sc, tci)
         } should produce [Error]
 
         Given("not enough types on the instance")
@@ -54,7 +55,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
             val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0), TGen(0, 1)))), Forall(0, List(Star, Star), (TGen(0, 0) fn TGen(0, 1)) fn tString))
             val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber)))
             val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
-            mti.makeInstanceMemberType(sc, tci)
+            mti.makeInstanceMemberType(TIEnv.empty, sc, tci)
         } should produce [Error]
     }
 
@@ -62,7 +63,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
         val sc = Qual(List(IsIn(ModuleId("Prelude", "Show"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn tString))
         val tci = Inst("Test", Nil, IsIn(ModuleId("Prelude", "Show"), List(tNumber)))
         val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
-        mti.makeInstanceMemberType(sc, tci) should be ===
+        mti.makeInstanceMemberType(TIEnv.empty, sc, tci)._2 should be ===
                 Qual(List(IsIn(ModuleId("Prelude", "Show"), List(tNumber))), tNumber fn tString)
     }
 
@@ -70,7 +71,7 @@ class ModuleTypeInferenceTests extends FlatSpec with GivenWhenThen {
         val sc = Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(TGen(0, 0), TGen(0, 1)))), Forall(0, List(Star, Star), (TGen(0, 0) fn TGen(0, 1)) fn tString))
         val tci = Inst("Test", Nil, IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString)))
         val mti = new ModuleTypeInference(Nil, Map.empty, Map.empty)
-        mti.makeInstanceMemberType(sc, tci) should be ===
+        mti.makeInstanceMemberType(TIEnv.empty, sc, tci)._2 should be ===
                 Qual(List(IsIn(ModuleId("Test", "MultiClass"), List(tNumber, tString))), (tNumber fn tString) fn tString)
     }
 
