@@ -117,9 +117,9 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             val (env1, dcons1) = currentDtds.foldLeft((env0, dcons0)) { case ((env0, dcs), (id, dtd)) =>
                 dtd.constructors.foldLeft((env0, dcs)) { case ((env0, dcons), dcon) =>
                     val (env1, at) = dcon.args match {
-                        case Seq() => (env, dts(id))
+                        case Seq() => (env0, dts(id))
                         case as =>
-                            val (env1, as1) = env.map(as) { (env0, a) =>
+                            val (env1, as1) = env0.map(as) { (env0, a) =>
                                 val (env1, _, a1) = ASTUtil.getType(env0, scopes(id.mId).tcons, tcons1, dtenvs(id), a)
                                 (env1, a1)
                             }
