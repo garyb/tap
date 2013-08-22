@@ -188,7 +188,7 @@ class TypeInferenceTests extends FlatSpec {
         val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr, Nil)
         val tv = TVar("µ1", Star)
         val qs = List(IsIn(ModuleId("Data.Monoid", "Monoid"), List(tv)))
-        ctx1 should be === ctx0.setNodeType(expr, Qual(qs, tv)).copy(uniq = 1)
+        ctx1 should be === ctx0.setNodeType(expr, Qual(qs, tv)).copy(uniq = 2)
         ps should be === qs
         t should be === tv
     }
@@ -288,7 +288,7 @@ class TypeInferenceTests extends FlatSpec {
                 .setNodeType(expr1, TVar("s", Star))
                 .setNodeType(expr2, tvApply)
                 .setNodeType(expr3, tvResult)
-                .copy(uniq = 3)
+                .copy(uniq = 4)
         ps should be === List(IsIn(ModuleId("Prelude", "show"), List(tvShow)))
         t should be === tvResult
     }
