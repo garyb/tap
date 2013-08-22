@@ -279,8 +279,8 @@ class TypeInferenceTests extends FlatSpec {
         val expr3 = RaiseErrorExpr(expr2)
         val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr3, Nil)
         val tvShow = TVar("µ1", Star)
-        val tvApply = TVar("µ1", Star)
-        val tvResult = TVar("µ2", Star)
+        val tvApply = TVar("µ2", Star)
+        val tvResult = TVar("µ3", Star)
         ctx1 should be === ctx0
                 .unify(TVar("s", Star), tvShow, expr2)
                 .unify(tvApply, tString, expr3)
