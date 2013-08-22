@@ -36,6 +36,19 @@ object Type {
     }
 
     /**
+     * Get the free TyVars from a type.
+     */
+    def freeTyVars(ts: List[Type]): Set[Tyvar] = {
+        def go(bound: Set[Tyvar], t: Type, acc: Set[Tyvar]): Set[Tyvar] = t match {
+            case Forall(tvs, t) => go(bound ++ tvs, t, acc)
+            case TAp(x, y) => go(bound, x, go(bound, y, acc))
+            case TVar(tv) if !(bound contains tv) => acc + tv
+            case _ => acc
+        }
+        ts.foldRight(Set.empty[Tyvar])(go(Set.empty, _, _))
+    }
+
+    /**
      * Constructs a function type.
      */
     implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
