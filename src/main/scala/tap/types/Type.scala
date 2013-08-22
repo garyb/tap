@@ -161,28 +161,4 @@ object Type {
         if (vs1.isEmpty) t
         else Forall((vs1 zip newBnds) map { case (tv, n) => bind(tv, n) }, zonkType(t))
     }
-
-    /**
-     * Instantiates a universally quantified type, replacing the quantified types with other types.
-     */
-    def inst(env0: TIEnv, t: Type): (TIEnv, Type) = t match {
-        case Forall(vs, t) =>
-            val (env1, vs1) = env0.map(vs) { case (env0, tv) => env0.newMetaTvar(tv.k) }
-            (env1, Substitutions.applySubst(vs, vs1 map MetaTv.apply, t))
-        case t => (env0, t)
-    }
-
-    /**
-     * Performs deep skolemisation, returning the skolem constants and newly skolemised type.
-     */
-    def skolemise(env0: TIEnv, t: Type): (TIEnv, List[Tyvar], Type) = t match {
-        case Forall(vs, t0) =>
-            val (env1, sks1) = env0.map(vs) { case (env0, tv) => env0.newSkolemTvar(tv) }
-            val (env2, sks2, t1) = skolemise(env1, Substitutions.applySubst(vs, sks1 map TVar.apply, t0))
-            (env2, sks1 ++ sks2, t1)
-        case TAp(x, y0) =>
-            val (env1, tvs, y1) = skolemise(env0, y0)
-            (env1, tvs, TAp(x, y1))
-        case t => (env0, Nil, t)
-    }
 }
