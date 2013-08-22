@@ -6,6 +6,7 @@ import scala.annotation.tailrec
 import tap.types.inference.{TIEnv, Substitutions}
 import tap.types.inference.Substitutions.{nullSubst, Subst}
 import tap.types.Natives._
+import tap.util.ContextOps._
 import language.implicitConversions
 import language.reflectiveCalls
 
@@ -164,11 +165,10 @@ object Type {
     /**
      * Instantiates a universally quantified type, replacing the quantified types with other types.
      */
-    def inst(sc: Forall, ts: List[Type], t: Type): Type = t match {
-        case Forall(i, ks, t) if i == sc.i => inst(sc, ts, t)
-        case Forall(i, ks, t) => Forall(i, ks, inst(sc, ts, t))
-        case TAp(l, r) => TAp(inst(sc, ts, l), inst(sc, ts, r))
-        case TGen(id, n) if id == sc.i => ts(n)
-        case t => t
+    def inst(env0: TIEnv, t: Type): (TIEnv, Type) = t match {
+        case Forall(vs, t) =>
+            val (env1, vs1) = env0.map(vs) { case (env0, tv) => env0.newMetaTvar(tv.k) }
+            (env1, Substitutions.applySubst(vs, vs1 map MetaTv.apply, t))
+        case t => (env0, t)
     }
 }
