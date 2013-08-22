@@ -14,11 +14,16 @@ case class Forall(tvs: List[Tyvar], t: Type) extends Type
 case class TAp(f: Type, a: Type) extends Type
 case class TCon(id: ModuleId, k: Kind) extends Type
 case class TVar(tv: Tyvar) extends Type { def id: String = tv.id }
-case class MetaTv(i: Int, k: Kind, var ref: Option[Type]) extends Type
+case class MetaTv(m: Meta) extends Type
 
-sealed trait Tyvar { def id: String }
+sealed trait Tyvar {
+    def id: String
+    def k: Kind
+}
 case class BoundTv(id: String, k: Kind) extends Tyvar
 case class SkolemTv(id: String, i: Int, k: Kind) extends Tyvar
+
+case class Meta(i: Int, k: Kind, var ref: Option[Type])
 
 object Type {
 
