@@ -12,16 +12,14 @@ object Substitutions {
     /**
      * Applies a substitution to a type.
      */
-    def applySubst(s: Subst, t: Type): Type =
-        t match {
-            case u: TVar => s.get(u) match {
-                case Some(t) => t
-                case _ => t
-            }
-            case TAp(l, r) => TAp(applySubst(s, l), applySubst(s, r))
-            case Forall(i, ks, t) => Forall(i, ks, applySubst(s, t))
-            case t => t
-        }
+    def applySubst(s: Subst, t: Type): Type = t match {
+        case Forall(tvs, t) => Forall(tvs, applySubst(s filterKeys { tv => !(tvs contains tv) }, t))
+        case TAp(l, r) => TAp(applySubst(s, l), applySubst(s, r))
+        case u: TVar => s.getOrElse(u, u)
+        case t => t
+    }
+
+    def applySubst(tvs: List[TVar], ts: List[Type], t: Type): Type = applySubst((tvs zip ts).toMap, t)
 
     /**
      * Applies a substitution to a predicated type.
