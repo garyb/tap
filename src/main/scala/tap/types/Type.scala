@@ -30,14 +30,8 @@ object Type {
     /**
      * Get the MetaTvs from a type.
      */
-    def metaTvs(ts: List[Type]): Set[MetaTv] = {
-        def findMetaTvs(t: Type, acc: Set[MetaTv]): Set[MetaTv] = t match {
-            case Forall(_, t) => findMetaTvs(t, acc)
-            case TAp(x, y) => findMetaTvs(x, findMetaTvs(y, acc))
-            case m: MetaTv => acc + m
-            case _ => acc
-        }
-        ts.foldRight(Set.empty[MetaTv])(findMetaTvs)
+    def metaTvs(ts: List[Type]): List[MetaTv] = {
+        ts.flatMap(tv).distinct
     }
 
     /**
@@ -129,25 +123,42 @@ object Type {
     /**
      * Finds the type variable used within a type.
      */
-    def tv(t: Type): List[TVar] = t match {
-        case u: TVar => List(u)
-        case TAp(l, r) => (tv(l) ++ tv(r)).distinct
-        case Forall(_, _, t) => tv(t)
-        case t => List.empty
+    def tv(t: Type): List[MetaTv] = t match {
+        case Forall(_, t) => tv(t)
+        case TAp(x, y) => (tv(x) ++ tv(y)).distinct
+        case m: MetaTv => List(m)
+        case _ => List.empty
+    }
+
+    val allBinders = for (i <- Stream.from(0); x <- ('a' to 'z').iterator) yield if (i == 0) x.toString else x.toString + i
+
+    def zonkType(t: Type): Type = t match {
+        case Forall(ns, t) => Forall(ns, zonkType(t))
+        case TAp(x, y) => TAp(zonkType(x), zonkType(y))
+        case MetaTv(m @ Meta(i, k, Some(t))) =>
+            val t1 = zonkType(t)
+            m.ref = Some(t1)
+            t1
+        case t => t
     }
 
     /**
      * Universally quantifies t using the specified type variables.
      */
-    def quantify(env: TIEnv, vs: List[TVar], t: Type): (TIEnv, Subst, Type) = {
-        val vs1 = tv(t) collect { case v if vs contains v => v }
-        if (vs1.isEmpty) (env, nullSubst, t)
-        else {
-            val ks = vs1 map Kind.kind
-            val (env1, fi) = env.newUnique
-            val s = (vs1 zip (List.range(0, vs1.size) map { n => TGen(fi, n) })).toMap
-            (env1, s, Forall(fi, ks, Substitutions.applySubst(s, t)))
+    def quantify(vs: List[MetaTv], t: Type): Type = {
+
+        val usedBndrs = tyVarBndrs(t) map { tv => tv.id }
+        val newBnds = allBinders filterNot usedBndrs.contains take vs.length
+
+        def bind(tv: MetaTv, name: String): Tyvar = {
+            val btv = BoundTv(name, tv.m.k)
+            tv.m.ref = Some(TVar(btv))
+            btv
         }
+
+        val vs1 = tv(t) collect { case v if vs contains v => v }
+        if (vs1.isEmpty) t
+        else Forall((vs1 zip newBnds) map { case (tv, n) => bind(tv, n) }, zonkType(t))
     }
 
     /**

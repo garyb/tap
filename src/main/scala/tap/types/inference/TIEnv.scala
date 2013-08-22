@@ -21,7 +21,7 @@ case class TIEnv(uniq: Int, s: Subst, ets: TypeInference.ExprTypeMap) {
     def newTvar(k: Kind): (TIEnv, Type) = withCtx(newMetaTvar(k), { m: Meta => MetaTv(m) })
     def newMetaTvar(k: Kind): (TIEnv, Meta) = withCtx(newUnique, { i: Int => Meta(i, k, None) })
     def newSkolemTvar(tv: Tyvar): (TIEnv, Tyvar) = withCtx(newUnique, { i: Int => SkolemTv(tv.id, i, tv.k) })
-    
+
 }
 
 object TIEnv {
