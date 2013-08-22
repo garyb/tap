@@ -23,6 +23,19 @@ case class SkolemTv(name: String, id: Int) extends Tyvar
 object Type {
 
     /**
+     * Get the MetaTvs from a type.
+     */
+    def metaTvs(ts: List[Type]): Set[MetaTv] = {
+        def findMetaTvs(t: Type, acc: Set[MetaTv]): Set[MetaTv] = t match {
+            case Forall(_, t) => findMetaTvs(t, acc)
+            case TAp(x, y) => findMetaTvs(x, findMetaTvs(y, acc))
+            case m: MetaTv => acc + m
+            case _ => acc
+        }
+        ts.foldRight(Set.empty[MetaTv])(findMetaTvs)
+    }
+
+    /**
      * Constructs a function type.
      */
     implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
