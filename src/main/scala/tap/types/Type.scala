@@ -49,6 +49,18 @@ object Type {
     }
 
     /**
+     * Get all the binders used in ForAlls in the type, so that when quantifying an outer for-all we can avoid these
+     * inner ones.
+     */
+    def tyVarBndrs(t: Type): Set[Tyvar] = {
+        def bndrs(t: Type, acc: Set[Tyvar]): Set[Tyvar] = {
+            case Forall(tvs, t) => bndrs(t, acc ++ tvs)
+            case TAp(x, y) => bndrs(x, bndrs(y, acc))
+        }
+        bndrs(t, Set.empty)
+    }
+
+    /**
      * Constructs a function type.
      */
     implicit def toFn(a: Type) = new { def fn(b: Type): Type = TAp(TAp(tArrow, a), b) }
