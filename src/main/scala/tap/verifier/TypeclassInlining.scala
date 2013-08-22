@@ -199,7 +199,11 @@ class TypeclassInlining(defs: ModuleDefinitions, initEnv: TIEnv)
                     if (sc.ps(0).id != msn) throw new Error("Typeclass member incorrect predicate found - " + m + " :: " + prettyPrint(sc))
                     val (env1, qt) = env.freshInstPartial(vs, sc)
                     val tvs = Qual.tv(qt) filterNot { tv => vs contains tv }
-                    (env1, if (tvs.nonEmpty) Qual.quantify(tvs, qt)._2.h else qt.h)
+                    val (env2, t) = if (tvs.nonEmpty) {
+                        val (env2, _, t) = Qual.quantify(env1, tvs, qt)
+                        (env2, t.h)
+                    } else (env1, qt.h)
+                    (env2, t)
                 }
 
                 // Build the type constructor for the typeclass
@@ -212,14 +216,14 @@ class TypeclassInlining(defs: ModuleDefinitions, initEnv: TIEnv)
                 // and returns the instantiated type constructor.
                 val dcon = (scs ++ tcmts).foldRight(t) { _ fn _ }
 
-                val sc = Type.quantify(tv(dcon), dcon)
+                val (env2, _, sc) = Type.quantify(env1, tv(dcon), dcon)
                 trace(prettyPrint(msn))
                 trace("-", prettyPrint(tcon))
-                trace("-", prettyPrint(Qual.quantify(tv(t), Qual(Nil, t))._2))
+                trace("-", prettyPrint(Qual.quantify(env2, tv(t), Qual(Nil, t))._3))
                 trace("-", prettyPrint(dcon))
-                trace("-", prettyPrint(sc._2))
+                trace("-", prettyPrint(sc))
 
-                loop(env1, xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc._2)))
+                loop(env2, xs, tcons + (msn -> tcon), dcons + (msn -> (tconName -> sc)))
         }
 
         // Loop through the typeclasses in dependency order

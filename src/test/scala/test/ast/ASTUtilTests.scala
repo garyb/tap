@@ -12,8 +12,13 @@ import tap.types.kinds._
 import tap.verifier.errors._
 import language.reflectiveCalls
 import tap.verifier.defs.ModuleDefinitions
+import tap.types.inference.TIEnv
 
 class ASTUtilTests extends FlatSpec with GivenWhenThen {
+
+    val nullEnv = TIEnv.empty
+
+    // ————————————————————————————————————————————————————————————————————————
 
     behavior of "getTConName"
 
@@ -160,17 +165,17 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
         val tcons = Map(
             ModuleId("Test", "TestA") -> TCon(ModuleId("Test", "TestA"), Star)
         )
-        getType(lookup, tcons, Map.empty, ASTTypeCon("TestA"))._2 should be ===
+        getType(nullEnv, lookup, tcons, Map.empty, ASTTypeCon("TestA"))._3 should be ===
                 TCon(ModuleId("Test", "TestA"), Star)
     }
 
     it should "throw an error if a TCon is missing from the lookup" in {
-        evaluating { getType(Map.empty, Map.empty, Map.empty, ASTTypeCon("Test")) } should produce [NoSuchElementException]
+        evaluating { getType(nullEnv, Map.empty, Map.empty, Map.empty, ASTTypeCon("Test")) } should produce [NoSuchElementException]
     }
 
     it should "throw an error if a TCon is missing from the tcons" in {
         val lookup = Map("Test" -> ModuleId("Test", "Test"))
-        evaluating { getType(lookup, Map.empty, Map.empty, ASTTypeCon("Test")) } should produce [UnknownTypeConstructorError]
+        evaluating { getType(nullEnv, lookup, Map.empty, Map.empty, ASTTypeCon("Test")) } should produce [UnknownTypeConstructorError]
     }
 
     it should "return the correct TVar in" in {
@@ -178,12 +183,12 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "a" -> TVar("a", Star),
             "b" -> TVar("b", Star)
         )
-        getType(Map.empty, Map.empty, tvs, ASTTypeVar("b"))._2 should be ===
+        getType(nullEnv, Map.empty, Map.empty, tvs, ASTTypeVar("b"))._3 should be ===
             tvs("b")
     }
 
     it should "throw an error if a TVar is missing from the tvs" in {
-        evaluating { getType(Map.empty, Map.empty, Map.empty, ASTTypeVar("a")) } should produce [UnknownTypeVariableError]
+        evaluating { getType(nullEnv, Map.empty, Map.empty, Map.empty, ASTTypeVar("a")) } should produce [UnknownTypeVariableError]
     }
 
     it should "return TAps" in {
@@ -191,14 +196,14 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "a" -> TVar("a", Kfun(Star, Kfun(Star, Star))),
             "b" -> TVar("b", Star)
         )
-        getType(Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b"))))._2 should be ===
+        getType(nullEnv, Map.empty, Map.empty, tvs, ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"), ASTTypeVar("b"))))._3 should be ===
                 TAp(TAp(tvs("a"), tvs("b")), tvs("b"))
     }
 
     it should "return function types without arguments" in {
         val tvs = Map("a" -> TVar("a", Star))
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"))))._2 should be ===
+        getType(nullEnv, Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"))))._3 should be ===
                 TAp(TAp(tArrow, tUnit), tvs("a"))
     }
 
@@ -209,23 +214,23 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
             "c" -> TVar("c", Star)
         )
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"))))._2 should be ===
+        getType(nullEnv, Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"))))._3 should be ===
                 TAp(TAp(tArrow, tvs("a")), tvs("b"))
 
-        getType(Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("c"))))._2 should be ===
+        getType(nullEnv, Map.empty, Map.empty, tvs, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("c"))))._3 should be ===
                 TAp(TAp(tArrow, tvs("a")), TAp(TAp(tArrow, tvs("b")), tvs("c")))
     }
 
     it should "return Foralls as needed" in {
         val lookup = Map("String" -> ModuleId("Native", "String"))
         val tcons = ModuleDefinitions.defaults.tcons
-        val t1 = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._2
-        t1 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn TGen(lastForallId, 0)) fn tString)
+        val t1 = getType(nullEnv, lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._3
+        t1 should be === (Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)) fn tString)
 
         When("quantified variables already exist in the tvs list, they should be hidden inside the forall")
         val tvs = Map("a" -> TVar("a", Star), "b" -> TVar("b", Star))
-        val t2 = getType(lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))._2
-        t2 should be === (Forall(lastForallId, List(Star), TGen(lastForallId, 0) fn (tvs("b") fn TGen(lastForallId, 0))) fn tvs("a"))
+        val t2 = getType(nullEnv, lookup, tcons, tvs, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))), ASTTypeVar("a"))))._3
+        t2 should be === (Forall(0, List(Star), TGen(0, 0) fn (tvs("b") fn TGen(0, 0))) fn tvs("a"))
     }
 
     it should "throw an error if a type is applied too many parameters" in {
@@ -239,30 +244,30 @@ class ASTUtilTests extends FlatSpec with GivenWhenThen {
         )
 
         evaluating {
-            getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("List"), List(ASTTypeCon("String"), ASTTypeCon("String"))))
+            getType(nullEnv, lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("List"), List(ASTTypeCon("String"), ASTTypeCon("String"))))
         } should produce [TypeConstructorTooManyArgsError]
 
         evaluating {
-            getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("String"), List(ASTTypeCon("String"))))
+            getType(nullEnv, lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("String"), List(ASTTypeCon("String"))))
         } should produce [TypeConstructorNoArgsError]
     }
 
     it should "return substitutions for type variables replaced with TGens in a Forall" in {
-        val s = getType(Map.empty, Map.empty, Map.empty, ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))._1
-        s should be === Map(TVar("a", Star) -> TGen(lastForallId, 0))
+        val s = getType(nullEnv, Map.empty, Map.empty, Map.empty, ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))._2
+        s should be === Map(TVar("a", Star) -> TGen(0, 0))
     }
 
     it should "return substitutions for type variables replaced with TGens in a Forall inside a ASTTypeApply" in {
         val lookup = Map("Maybe" -> ModuleId("Prelude", "Maybe"))
         val tcons = Map(ModuleId("Prelude", "Maybe") -> TCon(ModuleId("Prelude", "Maybe"), Kfun(Star, Star)))
-        val s = getType(lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("Maybe"), List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))._1
-        s should be === Map(TVar("a", Star) -> TGen(lastForallId, 0))
+        val s = getType(nullEnv, lookup, tcons, Map.empty, ASTTypeApply(ASTTypeCon("Maybe"), List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))._2
+        s should be === Map(TVar("a", Star) -> TGen(0, 0))
     }
 
     it should "return substitutions for type variables replaced with TGens in a Forall inside a ASTFunctionType" in {
         val lookup = Map("String" -> ModuleId("Prelude", "String"))
         val tcons = Map(ModuleId("Prelude", "String") -> TCon(ModuleId("Prelude", "String"), Star))
-        val s = getType(lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._1
-        s should be === Map(TVar("a", Star) -> TGen(lastForallId, 0))
+        val s = getType(nullEnv, lookup, tcons, Map.empty, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("String"))))._2
+        s should be === Map(TVar("a", Star) -> TGen(0, 0))
     }
 }

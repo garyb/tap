@@ -3,7 +3,7 @@ package tap.types
 import tap.ModuleId
 import tap.types.kinds.Kind
 import scala.annotation.tailrec
-import tap.types.inference.Substitutions
+import tap.types.inference.{TIEnv, Substitutions}
 import tap.types.inference.Substitutions.{nullSubst, Subst}
 import tap.types.Natives._
 import language.implicitConversions
@@ -17,13 +17,6 @@ case class TGen(fi: Int, i: Int) extends Type
 case class Forall(i: Int, ks: List[Kind], t: Type) extends Type
 
 object Type {
-
-    private var forallId: Int = 0
-    def newForallId(): Int = {
-        forallId += 1
-        forallId
-    }
-    def lastForallId: Int = forallId
 
     /**
      * Constructs a function type.
@@ -99,14 +92,14 @@ object Type {
     /**
      * Universally quantifies t using the specified type variables.
      */
-    def quantify(vs: List[TVar], t: Type): (Subst, Type) = {
+    def quantify(env: TIEnv, vs: List[TVar], t: Type): (TIEnv, Subst, Type) = {
         val vs1 = tv(t) collect { case v if vs contains v => v }
-        if (vs1.isEmpty) (nullSubst, t)
+        if (vs1.isEmpty) (env, nullSubst, t)
         else {
             val ks = vs1 map Kind.kind
-            val fi = newForallId()
+            val (env1, fi) = env.newUnique
             val s = (vs1 zip (List.range(0, vs1.size) map { n => TGen(fi, n) })).toMap
-            (s, Forall(fi, ks, Substitutions.applySubst(s, t)))
+            (env1, s, Forall(fi, ks, Substitutions.applySubst(s, t)))
         }
     }
 

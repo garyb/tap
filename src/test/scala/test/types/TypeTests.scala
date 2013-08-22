@@ -11,8 +11,13 @@ import tap.types.inference.Substitutions.nullSubst
 import java.lang.IllegalArgumentException
 import language.reflectiveCalls
 import test.TypeFixture
+import tap.types.inference.TIEnv
 
 class TypeTests extends FlatSpec with TypeFixture {
+
+    val nullEnv = TIEnv.empty
+
+    //-------------------------------------------------------------------------
 
     behavior of "getTConID"
 
@@ -123,23 +128,22 @@ class TypeTests extends FlatSpec with TypeFixture {
 
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
-        quantify(List.empty, a fn a) should be === (nullSubst, a fn a)
+        val (_, s, t) = quantify(nullEnv, List.empty, a fn a)
+        (s, t) should be === (nullSubst, a fn a)
     }
 
     it should "return substitutions for the variables replaced with TGens" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val s = quantify(List(a), a fn (b fn a))._1
-        val fi = lastForallId
-        s should be === nullSubst + (a -> TGen(fi, 0))
+        val s = quantify(nullEnv, List(a), a fn (b fn a))._2
+        s should be === nullSubst + (a -> TGen(0, 0))
     }
 
     it should "only quantify type variables in the provided list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), a fn (b fn a))._2
-        val fi = lastForallId
-        sc should be === Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0)))
+        val sc = quantify(nullEnv, List(a), a fn (b fn a))._3
+        sc should be === Forall(0, List(Star), TGen(0, 0) fn (b fn TGen(0, 0)))
     }
 
     //-------------------------------------------------------------------------

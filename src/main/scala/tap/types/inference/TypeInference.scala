@@ -197,16 +197,16 @@ object TypeInference {
             val t1 = applySubst(ctx2.s, t)
             val fs = (as.values.toList flatMap { a => Qual.tv(applySubst(ctx2.s, a)) }).distinct
             val gs = tv(t1) diff fs
-            val sc1 = sc.h match {
-                case Forall(fi, _, _) => Qual.quantify(gs, Qual(qs1, t1), Some(fi))._2
-                case _ => Qual.quantify(gs, Qual(qs1, t1))._2
+            val (ctx3, _, sc1) = sc.h match {
+                case Forall(fi, _, _) => Qual.quantify(ctx2, gs, Qual(qs1, t1), Some(fi))
+                case _ => Qual.quantify(ctx2, gs, Qual(qs1, t1))
             }
-            val ps0 = ps map { applySubst(ctx2.s, _) }
+            val ps0 = ps map { applySubst(ctx3.s, _) }
             val ps1 = ps0 filter { case p => !entail(ce, qs1, p) }
             val (ds, rs) = split(ce, fs, ps1)
             if (sc != sc1) throw TIError("signature too general in " + prettyPrint(ex._1) + " ::\n\t\t(" + prettyPrint(sc) + ") it don't match\n\t\t(" + prettyPrint(sc1) + ")", e)
             else if (rs.nonEmpty) throw TIError("context too weak in " + prettyPrint(ex._1) + " :: " + prettyPrint(sc) + " it don't got " + rs.map(prettyPrint).mkString(", "), e)
-            else (ctx2.setNodeType(e, Qual(qs1, t1)), ds)
+            else (ctx3.setNodeType(e, Qual(qs1, t1)), ds)
     }
 
     /**
@@ -225,9 +225,12 @@ object TypeInference {
         val vss = ts1 map tv
         val gs = vss.foldLeft(List.empty[TVar]) { (xs, ys) => xs ++ (ys filterNot { y => xs contains y }) } diff fs
         val (ds, rs) = split(ce, fs, ps1)
-        val scs1 = ts1 map { t => Qual.quantify(gs, Qual(rs, t))._2 }
-        val ctx3 = ctx2.foreach(es zip ts1) { case (ctx, (e, t)) => ctx.setNodeType(e, Qual(rs, t)) }
-        (as ++ (is zip scs1), ctx3, ds)
+        val (ctx3, scs1) = ctx2.map(ts1) { (ctx, t) =>
+            val (ctx1, _, t1) = Qual.quantify(ctx, gs, Qual(rs, t))
+            (ctx1, t1)
+        }
+        val ctx4 = ctx3.foreach(es zip ts1) { case (ctx, (e, t)) => ctx.setNodeType(e, Qual(rs, t)) }
+        (as ++ (is zip scs1), ctx4, ds)
     }
 
     /**

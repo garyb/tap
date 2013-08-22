@@ -9,8 +9,13 @@ import tap.types.classes.Qual._
 import tap.types.classes.{IsIn, Qual}
 import tap.types.kinds.Star
 import language.reflectiveCalls
+import tap.types.inference.TIEnv
 
 class QualTests extends FlatSpec {
+
+    val nullEnv = TIEnv.empty
+
+    //-------------------------------------------------------------------------
 
     behavior of "tv"
 
@@ -71,30 +76,27 @@ class QualTests extends FlatSpec {
 
     it should "return the input when none of the provided type variables are in the type" in {
         val a = TVar("a", Star)
-        quantify(List.empty, Qual(Nil, a fn a))._2 should be === Qual(Nil, a fn a)
+        quantify(nullEnv, List.empty, Qual(Nil, a fn a))._3 should be === Qual(Nil, a fn a)
     }
 
     it should "return substitutions for the variables replaced with TGens" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val s = quantify(List(a), Qual(Nil, a fn (b fn a)))._1
-        val fi = Type.lastForallId
-        s should be === nullSubst + (a -> TGen(fi, 0))
+        val s = quantify(nullEnv, List(a), Qual(Nil, a fn (b fn a)))._2
+        s should be === nullSubst + (a -> TGen(0, 0))
     }
 
     it should "only quantify type variables in the provided list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), Qual(Nil, a fn (b fn a)))._2
-        val fi = Type.lastForallId
-        sc should be === Qual(Nil, Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0))))
+        val sc = quantify(nullEnv, List(a), Qual(Nil, a fn (b fn a)))._3
+        sc should be === Qual(Nil, Forall(0, List(Star), TGen(0, 0) fn (b fn TGen(0, 0))))
     }
 
     it should "quantify type variables in the predicates list" in {
         val a = TVar("a", Star)
         val b = TVar("b", Star)
-        val sc = quantify(List(a), Qual(List(IsIn(ModuleId("Test", "TC"), List(a))), a fn (b fn a)))._2
-        val fi = Type.lastForallId
-        sc should be === Qual(List(IsIn(ModuleId("Test", "TC"), List(TGen(fi, 0)))), Forall(fi, List(Star), TGen(fi, 0) fn (b fn TGen(fi, 0))))
+        val sc = quantify(nullEnv, List(a), Qual(List(IsIn(ModuleId("Test", "TC"), List(a))), a fn (b fn a)))._3
+        sc should be === Qual(List(IsIn(ModuleId("Test", "TC"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn (b fn TGen(0, 0))))
     }
  }

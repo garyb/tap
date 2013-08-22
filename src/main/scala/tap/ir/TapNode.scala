@@ -107,12 +107,13 @@ object TapNode {
 
         case ASTRaiseError(expr) => RaiseErrorExpr(fromAST(expr, state))
         case ASTCast(expr, ttype) =>
-            val e = fromAST(expr, state)
+            throw new Error("Casting temporarily disabled, until TIEnv stuff is sorted out")
+            /*val e = fromAST(expr, state)
             val t = ASTUtil.getType(state.tconLookup, state.tcons, Map.empty, ttype match {
                 case t: ASTForall => t
                 case t => ASTForall(ASTUtil.findTypeVars(t).toList, t)
             })._2
-            CastExpr(e, t)
+            CastExpr(e, t)*/
 
         case ASTString(value) => StringExpr(value)
         case ASTNumber(value) => NumberExpr(value)
@@ -128,7 +129,7 @@ object TapNode {
     }).setFilePosFrom(cnode)
 
     def fromCaseValueAST(bnode: ASTPattern, state: ResolveState, patVars: Set[String]): (PatternNode, ResolveState, Set[String]) = {
-        val (pat, state1, patVars1) = (bnode match {
+        val (pat, state1, patVars1) = bnode match {
 
             case ASTValueRead(name) =>
                 if (patVars contains name) throw DuplicatePatternBind(name, bnode)
@@ -152,7 +153,7 @@ object TapNode {
             case ASTString(value) => (StringExpr(value), state, patVars)
             case ASTNumber(value) => (NumberExpr(value), state, patVars)
 
-        })
+        }
         (pat.setFilePosFrom(bnode), state1, patVars1)
     }
 }

@@ -63,7 +63,7 @@ object Natives {
         idTrue -> tBool,
         idFalse -> tBool,
 
-        idVar -> Type.quantify(List(TVar("a", Star)), TVar("a", Star) fn TAp(TCon(idVar, Kfun(Star, Star)), TVar("a", Star)))._2,
+        idVar -> Forall(-1, List(Star), TGen(-1, 0) fn TAp(TCon(idVar, Kfun(Star, Star)), TGen(-1, 0))),
 
         idUnit -> tUnit,
 

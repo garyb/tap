@@ -20,9 +20,9 @@ class TypeInferenceTests extends FlatSpec {
 
     val testCE = ClassEnvironments.nullEnv
     val testAs = Map[Id, Qual[Type]](
-        ModuleId("Prelude", "show") -> Qual.quantify(List(TVar("a", Star)), Qual(List(IsIn(ModuleId("Prelude", "show"), List(TVar("a", Star)))), TVar("a", Star) fn tString))._2
+        ModuleId("Prelude", "show") -> Qual.quantify(TIEnv.empty, List(TVar("a", Star)), Qual(List(IsIn(ModuleId("Prelude", "show"), List(TVar("a", Star)))), TVar("a", Star) fn tString))._3
     )
-    val nullCtx = TIEnv.empty
+    val nullCtx = TIEnv.empty.copy(uniq = 1)
 
     //-------------------------------------------------------------------------
 
@@ -32,17 +32,17 @@ class TypeInferenceTests extends FlatSpec {
         nullCtx.freshInst(tNumber)._2 should be === tNumber
         nullCtx.freshInst(tNumber fn tString)._2 should be === (tNumber fn tString)
         nullCtx.freshInst(TVar("a", Star) fn tString)._2 should be === (TVar("a", Star) fn tString)
-        nullCtx.freshInst(TGen(0, 0) fn TGen(0, 0))._2 should be === (TGen(0, 0) fn TGen(0, 0))
+        nullCtx.freshInst(TGen(1, 0) fn TGen(1, 0))._2 should be === (TGen(1, 0) fn TGen(1, 0))
     }
 
     it should "replace TGens in a Forall with new type variables" in {
-        val result = nullCtx.freshInst(Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)))._2
-        result should be === (TVar("µ0", Star) fn TVar("µ0", Star))
+        val result = nullCtx.freshInst(Forall(1, List(Star), TGen(1, 0) fn TGen(1, 0)))._2
+        result should be === (TVar("µ1", Star) fn TVar("µ1", Star))
     }
 
     it should "only replace TGens belonging to the current Forall with new type variables" in {
-        val result = nullCtx.freshInst(Forall(0, List(Star), TGen(0, 0) fn TGen(1, 0)))._2
-        result should be === (TVar("µ0", Star) fn TGen(1, 0))
+        val result = nullCtx.freshInst(Forall(1, List(Star), TGen(1, 0) fn TGen(2, 0)))._2
+        result should be === (TVar("µ1", Star) fn TGen(2, 0))
     }
 
     //-------------------------------------------------------------------------
@@ -61,7 +61,7 @@ class TypeInferenceTests extends FlatSpec {
 
     it should "replace TGens in a Forall with new type variables, applying the same substitution to the predicates in the Qual" in {
         val result = nullCtx.freshInst(Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0))))._2
-        val lastVar = TVar("µ0", Star)
+        val lastVar = TVar("µ1", Star)
         result should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(lastVar))), lastVar fn lastVar)
     }
 
@@ -70,7 +70,7 @@ class TypeInferenceTests extends FlatSpec {
             IsIn(ModuleId("Test", "Class"), List(TGen(0, 0))),
             IsIn(ModuleId("Test", "Class"), List(TGen(1, 0)))),
             Forall(0, List(Star), TGen(0, 0) fn Forall(1, List(Star), TGen(1, 0)))))._2
-        val lastVar = TVar("µ0", Star)
+        val lastVar = TVar("µ1", Star)
         result should be === Qual(List(
             IsIn(ModuleId("Test", "Class"), List(lastVar)),
             IsIn(ModuleId("Test", "Class"), List(TGen(1, 0)))),
@@ -90,12 +90,12 @@ class TypeInferenceTests extends FlatSpec {
 
     it should "replace TGens in a Forall, first with the specified types, and after that with new type variables" in {
         val result = nullCtx.freshInstPartial(List(tString), Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1)))._2
-        result should be === (tString fn TVar("µ0", Star))
+        result should be === (tString fn TVar("µ1", Star))
     }
 
     it should "only replace TGens belonging to the current Forall with new type variables" in {
         val result = nullCtx.freshInstPartial(List(tString), Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1) fn TGen(1, 0)))._2
-        result should be === (tString fn TVar("µ0", Star) fn TGen(1, 0))
+        result should be === (tString fn TVar("µ1", Star) fn TGen(1, 0))
     }
 
     it should "throw an error if too many types are provided" in {
@@ -120,7 +120,7 @@ class TypeInferenceTests extends FlatSpec {
 
     it should "replace TGens in a Forall, first with the specified types, and after that with new type variables, applying the same substitution to the predicates in the Qual" in {
         val result = nullCtx.freshInstPartial(List(tString), Qual(List(IsIn(ModuleId("Test", "Class"), List(TGen(0, 0)))), Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1))))._2
-        val lastVar = TVar("µ0", Star)
+        val lastVar = TVar("µ1", Star)
         result should be === Qual(List(IsIn(ModuleId("Test", "Class"), List(tString))), tString fn lastVar)
     }
 
@@ -129,7 +129,7 @@ class TypeInferenceTests extends FlatSpec {
             IsIn(ModuleId("Test", "Class"), List(TGen(0, 0))),
             IsIn(ModuleId("Test", "Class"), List(TGen(1, 0)))),
             Forall(0, List(Star, Star), TGen(0, 0) fn TGen(0, 1) fn Forall(1, List(Star), TGen(1, 0)))))._2
-        val lastVar = TVar("µ0", Star)
+        val lastVar = TVar("µ1", Star)
         result should be === Qual(List(
             IsIn(ModuleId("Test", "Class"), List(tString)),
             IsIn(ModuleId("Test", "Class"), List(TGen(1, 0)))),
@@ -186,7 +186,7 @@ class TypeInferenceTests extends FlatSpec {
         val ctx0 = nullCtx
         val expr = ValueReadExpr(LocalId("testval"))
         val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr, Nil)
-        val tv = TVar("µ0", Star)
+        val tv = TVar("µ1", Star)
         val qs = List(IsIn(ModuleId("Data.Monoid", "Monoid"), List(tv)))
         ctx1 should be === ctx0.setNodeType(expr, Qual(qs, tv)).copy(uniq = 1)
         ps should be === qs
@@ -278,7 +278,7 @@ class TypeInferenceTests extends FlatSpec {
         val expr2 = ApplyExpr(expr0, expr1)
         val expr3 = RaiseErrorExpr(expr2)
         val (ctx1, ps, t) = tiExpr(ce, as, ctx0, expr3, Nil)
-        val tvShow = TVar("µ0", Star)
+        val tvShow = TVar("µ1", Star)
         val tvApply = TVar("µ1", Star)
         val tvResult = TVar("µ2", Star)
         ctx1 should be === ctx0

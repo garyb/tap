@@ -59,7 +59,8 @@ object ProgramVerifier {
                 val modules = moduleGroup map { id => asts(id) }
                 val verifier = new ModuleVerifier(scopeMap)
                 val typechecker = new ModuleTypeInference(modules, scopeMap, moduleDeps)
-                val (env1, defs1) = typechecker(env, verifier(modules, defs))
+                val (env0, defs0) = verifier(modules, defs, env)
+                val (env1, defs1) = typechecker(env0, defs0)
                 (env1, defs1)
         }
 

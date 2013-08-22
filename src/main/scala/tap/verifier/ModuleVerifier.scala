@@ -7,11 +7,12 @@ import tap.types.Type._
 import tap.types._
 import tap.types.classes.ClassEnvironments.Inst
 import tap.types.classes.{TypeclassDef, Qual, IsIn}
-import tap.types.inference.Substitutions
+import tap.types.inference.{TIEnv, Substitutions}
 import tap.types.kinds.Kind._
 import tap.types.kinds._
 import tap.util.{trace, Graph}
 import tap.util.PrettyPrint._
+import tap.util.ContextOps._
 import tap.verifier.defs.{DefinitionsLookup, ModuleDefinitions}
 import tap.verifier.errors._
 import tap.{InstId, ModuleId, Id}
@@ -23,24 +24,23 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
     type TypeConstructors = Map[ModuleId, TCon]
     type TypeVars = Map[String, TVar]
 
-    def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions): ModuleDefinitions = {
+    def apply(modules: Seq[ASTModule], verifiedDefs: ModuleDefinitions, env0: TIEnv): (TIEnv, ModuleDefinitions) = {
 
         val dtASTs = modules.flatMap { m => m.members.collect { case dtd: ASTDataType => m.name -> dtd } }
         val tcATSs = modules.flatMap { m => m.members.collect { case tcd: ASTClass => m.name -> tcd } }
         val instASTs = modules.flatMap { m => m.members.collect { case tci: ASTClassInst => m.name -> tci } }
         val mdASTs = modules.flatMap { m => m.members.collect { case md: ASTDef => m.name -> md } }
 
-        var defs = verifiedDefs
-        defs = addDataTypeDefs(dtASTs, defs)
-        defs = addTypeclassDefs(tcATSs, defs)
-        defs = addTypeclassInstances(instASTs, defs)
-        defs = addMemberDefs(mdASTs, defs)
-        defs = addTypeclassMemberDefs(tcATSs, defs)
-        defs = addMemberImplementations(modules, mdASTs, defs)
-        defs
+        val (env1, defs1) = addDataTypeDefs(env0, dtASTs, verifiedDefs)
+        val        defs2  = addTypeclassDefs(tcATSs, defs1)
+        val (env2, defs3) = addTypeclassInstances(env1, instASTs, defs2)
+        val (env3, defs4) = addMemberDefs(env2, mdASTs, defs3)
+        val (env4, defs5) = addTypeclassMemberDefs(env3, tcATSs, defs4)
+        val        defs6  = addMemberImplementations(modules, mdASTs, defs5)
+        (env4, defs6)
     }
 
-    def addDataTypeDefs(dtASTs: Seq[(ModuleName, ASTDataType)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addDataTypeDefs(env: TIEnv, dtASTs: Seq[(ModuleName, ASTDataType)], defs: ModuleDefinitions): (TIEnv, ModuleDefinitions) = {
 
         // Check the data types do not conflict with imported definitions in the modules they belong to
         dtASTs foreach { case (mId, dt) =>
@@ -76,7 +76,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         val tconOrd = Graph.components(tconDeps)
 
         // Extract the type constructors and data constructors for each module
-        val (tcons, dcons) = tconOrd.foldLeft((defs.tcons, defs.dcons)) { case ((tcons0, dcons0), currentDtdNames) =>
+        val (env1, tcons, dcons) = tconOrd.foldLeft((env, defs.tcons, defs.dcons)) { case ((env0, tcons0, dcons0), currentDtdNames) =>
 
             // The ASTs for the current group of data type definitions
             val currentDtds = currentDtdNames.zip (currentDtdNames map { msn => dtASTLookup(msn) }).toMap
@@ -114,22 +114,28 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
 
             // Create function types for the data constructors.
-            val dcons1 = currentDtds.foldLeft(dcons0) { case (dcs, (id, dtd)) =>
-                dtd.constructors.foldLeft(dcs) { case (dcons, dcon) =>
-                    val at = dcon.args match {
-                        case Seq() => dts(id)
-                        case as => as.map { a => ASTUtil.getType(scopes(id.mId).tcons, tcons1, dtenvs(id), a)._2 }.foldRight(dts(id): Type) { (x, y) => x fn y }
+            val (env1, dcons1) = currentDtds.foldLeft((env0, dcons0)) { case ((env0, dcs), (id, dtd)) =>
+                dtd.constructors.foldLeft((env0, dcs)) { case ((env0, dcons), dcon) =>
+                    val (env1, at) = dcon.args match {
+                        case Seq() => (env, dts(id))
+                        case as =>
+                            val (env1, as1) = env.map(as) { (env0, a) =>
+                                val (env1, _, a1) = ASTUtil.getType(env0, scopes(id.mId).tcons, tcons1, dtenvs(id), a)
+                                (env1, a1)
+                            }
+                            (env1, as1.foldRight(dts(id): Type) { (x, y) => x fn y })
                     }
                     val did = ModuleId(id.mId, dcon.name)
                     if (dcons contains did) throw ModuleDuplicateDefinition(id.mId, "data constructor", dcon.name, dtd)
-                    dcons + (did -> Type.quantify(Type.tv(at), at)._2)
+                    val (env2, _, qt) = Type.quantify(env1, Type.tv(at), at)
+                    (env2, dcons + (did -> qt))
                 }
             }
 
-            (tcons1, dcons1)
+            (env1, tcons1, dcons1)
         }
 
-        defs.copy(tcons = tcons, dcons = dcons)
+        (env1, defs.copy(tcons = tcons, dcons = dcons))
     }
 
     def addTypeclassDefs(tcASTs: Seq[(ModuleName, ASTClass)], defs: ModuleDefinitions): ModuleDefinitions = {
@@ -246,9 +252,9 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
         defs.copy(tcs = tcs)
     }
 
-    def addTypeclassInstances(instASTs: Seq[(ModuleName, ASTClassInst)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassInstances(env: TIEnv, instASTs: Seq[(ModuleName, ASTClassInst)], defs: ModuleDefinitions): (TIEnv, ModuleDefinitions) = {
 
-        val tcis = instASTs.foldLeft(defs.tcis) { case (result, (mId, ast @ ASTClassInst(name, context, params, members))) =>
+        val (env1, tcis) = instASTs.foldLeft((env, defs.tcis)) { case ((env0, result), (mId, ast @ ASTClassInst(name, context, params, members))) =>
 
             val tconLookup = scopes(mId).tcons
             val tcIds = scopes(mId).tcs
@@ -263,12 +269,12 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             if (params.length != tc.vs.length) throw TypeclassArityError(name, tc.vs.length, params.length, ast)
 
-            val ps = (params zip tc.vs) map {
-                case (param: ASTTypeVar, _) => throw TypeclassIllegalParameterError("Typeclass parameters cannot be type variables " + (usedParams contains param.name), param)
-                case (param, tcp) =>
-                    val t = lookupInstanceParamType(tconLookup, defs.tcons, param)
+            val (env1, ps) = env0.map(params zip tc.vs) {
+                case (env0, (param: ASTTypeVar, _)) => throw TypeclassIllegalParameterError("Typeclass parameters cannot be type variables " + (usedParams contains param.name), param)
+                case (env0, (param, tcp)) =>
+                    val (env1, t) = lookupInstanceParamType(env0, tconLookup, defs.tcons, param)
                     if (kind(tcp) != kind(t)) throw TypeclassIllegalParameterError("Type parameter kind is wrong: '" + kind(t) + "' should be '" + kind(tcp) + "' " + prettyPrint(t), param)
-                    t
+                    (env1, t)
             }
 
             val tvs = (ps flatMap { p => Type.tv(p) } map { tv => tv.id -> tv }).toMap
@@ -287,13 +293,13 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
 
             val existingInsts = result.getOrElse(tcId, List.empty)
             val inst = Inst(mId, preds, IsIn(tcId, ps)).setFilePosFrom(ast)
-            result + (tcId -> (inst :: existingInsts))
+            (env1, result + (tcId -> (inst :: existingInsts)))
         }
 
-        defs.copy(tcis = tcis)
+        (env1, defs.copy(tcis = tcis))
     }
 
-    def addMemberDefs(mdASTs: Seq[(ModuleName, ASTDef)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addMemberDefs(env: TIEnv, mdASTs: Seq[(ModuleName, ASTDef)], defs: ModuleDefinitions): (TIEnv, ModuleDefinitions) = {
 
         // Check the member definitions do not conflict with imported definitions in the modules they belong to
         mdASTs foreach { case (mId, m) =>
@@ -303,38 +309,40 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             }
         }
 
-        val mts = mdASTs.foldLeft(defs.mts) { case (result, (mId, ast @ ASTDef(id, qtype))) =>
+        val (env1, mts) = mdASTs.foldLeft((env, defs.mts)) { case ((env0, result), (mId, ast @ ASTDef(id, qtype))) =>
             val qId = ModuleId(mId, id)
             if (result contains qId) throw throw ModuleDuplicateDefinition(mId, "member", id, ast)
-            result + (qId -> getMemberType(qId, qtype, defs))
+            val (env1, mt) = getMemberType(env0, qId, qtype, defs)
+            (env1, result + (qId -> mt))
         }
 
-        defs.copy(mts = mts)
+        (env1, defs.copy(mts = mts))
     }
 
-    def addTypeclassMemberDefs(tcASTs: Seq[(ModuleName, ASTClass)], defs: ModuleDefinitions): ModuleDefinitions = {
+    def addTypeclassMemberDefs(env: TIEnv, tcASTs: Seq[(ModuleName, ASTClass)], defs: ModuleDefinitions): (TIEnv, ModuleDefinitions) = {
 
-        val mts = tcASTs.foldLeft(defs.mts) { case (result, (mId, ASTClass(tcName, _, _, members))) =>
+        val (env1, mts) = tcASTs.foldLeft((env, defs.mts)) { case ((env0, result), (mId, ASTClass(tcName, _, _, members))) =>
 
             val currScope = scopes(mId)
             val msntc = currScope.tcs(tcName)
             val tc = defs.tcs(msntc)
             val pred = IsIn(msntc, tc.vs)
 
-            members.foldLeft(result) {
-                case (result, ast @ ASTClassMemberDef(id, qtype)) =>
+            members.foldLeft((env0, result)) {
+                case ((env0, result), ast @ ASTClassMemberDef(id, qtype)) =>
                     currScope.members.get(id) match {
                         case Some(msn) if msn.mId != mId => throw NamespaceError("member", id, ast)
                         case _ =>
                     }
                     val qId = ModuleId(mId, id)
                     if (result contains qId) throw ModuleDuplicateDefinition(mId, "member", id, ast)
-                    result + (qId -> getMemberType(qId, qtype, defs, Some(pred)))
+                    val (env1, mt) = getMemberType(env0, qId, qtype, defs, Some(pred))
+                    (env1, result + (qId -> mt))
                 case (result, _) => result
             }
         }
 
-        defs.copy(mts = mts)
+        (env1, defs.copy(mts = mts))
     }
 
     def addMemberImplementations(modules: Seq[ASTModule], mdASTs: Seq[(ModuleName, ASTDef)], defs: ModuleDefinitions): ModuleDefinitions = {
@@ -408,7 +416,7 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             IsIn(msntc, ps)
         }
 
-    def getMemberType(qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions, classPred: Option[IsIn] = None): Qual[Type] = {
+    def getMemberType(env: TIEnv, qId: ModuleId, qtype: ASTQType, defs: ModuleDefinitions, classPred: Option[IsIn] = None): (TIEnv, Qual[Type]) = {
         val ASTQType(context, ttype) = qtype
         val ms = scopes(qId.mId)
         val ki = KInfer.constrain(ms.tcons, defs.tcons, qId, Seq(qId), Seq(ttype))
@@ -420,21 +428,23 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
             case Some(p) => p :: ps0
             case None => ps0
         }
-        val (s0, t0) = ASTUtil.getType(ms.tcons, defs.tcons, tvs, ttype)
-        val (s1, t1) = Type.quantify(tvs.values.toList, t0)
+        val (env0, s0, t0) = ASTUtil.getType(env, ms.tcons, defs.tcons, tvs, ttype)
+        val (env1, s1, t1) = Type.quantify(env0, tvs.values.toList, t0)
         val s2 = s0 ++ s1
-        Qual(ps1 map { p => Substitutions.applySubst(s2, p) }, t1)
+        (env1, Qual(ps1 map { p => Substitutions.applySubst(s2, p) }, t1))
     }
 
-    def lookupInstanceParamType(lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): Type = ttype match {
+    def lookupInstanceParamType(env: TIEnv, lookup: Map[String, ModuleId], tcons: TypeConstructors, ttype: ASTType): (TIEnv, Type) = ttype match {
 
-        case t: ASTTypeCon => ASTUtil.getType(lookup, tcons, Map.empty, t)._2
+        case t: ASTTypeCon =>
+            val (env1, _, t1) = ASTUtil.getType(env, lookup, tcons, Map.empty, t)
+            (env1, t1)
 
         case t @ ASTTypeApply(thing: ASTTypeCon, params) =>
 
             // TODO: this can probably be simplified with a more intelligent usage of ASTUtil.findTypeVars and ASTUtil.getType
 
-            val tcon = ASTUtil.getType(lookup, tcons, Map.empty, thing)._2.asInstanceOf[TCon]
+            val tcon = ASTUtil.getType(env, lookup, tcons, Map.empty, thing)._3.asInstanceOf[TCon]
 
             tcon.k match {
                 case Star if params.nonEmpty => throw TypeConstructorNoArgsError(tcon, t)
@@ -451,7 +461,8 @@ class ModuleVerifier(val scopes: Map[String, DefinitionsLookup]) {
                             case _ => throw new Error("Illegal AST: type constructor is being applied with a non-typevar argument in parameters of typeclass.")
                         }
                     }
-                    ASTUtil.getType(lookup, tcons, tvars, t)._2
+                    val (env1, _, t1) = ASTUtil.getType(env, lookup, tcons, tvars, t)
+                    (env1, t1)
                 case _: Kvar => throw new Error("tcon kind is Kvar")
             }
 

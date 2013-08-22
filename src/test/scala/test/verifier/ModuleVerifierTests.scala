@@ -15,6 +15,7 @@ import tap.types.classes.ClassEnvironments.Inst
 import tap.ir._
 import language.reflectiveCalls
 import test.TapNodeEquality
+import tap.types.inference.TIEnv
 
 class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenThen {
 
@@ -83,19 +84,14 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                     .addMember("memberB", ModuleId("ModuleB", "memberB"))
         ))
 
-        val defs = v.apply(Seq(mA, mB), testDefs)
-
-        val cmemberBFI = Type.lastForallId
-        val cmemberAFI = cmemberBFI - 1
-        val dataA1FI = cmemberAFI - 1
-        val dataA2FI = dataA1FI - 1
+        val (ctx, defs) = v.apply(Seq(mA, mB), testDefs, TIEnv.empty)
 
         defs.tcons should be === testDefs.tcons +
                 (ModuleId("ModuleA", "TypeA") -> TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star))) +
                 (ModuleId("ModuleB", "TypeB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.dcons should be === testDefs.dcons +
-                (ModuleId("ModuleA", "DataA2") -> Forall(dataA2FI, List(Star), TGen(dataA2FI, 0) fn TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA2FI, 0)))) +
-                (ModuleId("ModuleA", "DataA1") -> Forall(dataA1FI, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(dataA1FI, 0)))) +
+                (ModuleId("ModuleA", "DataA2") -> Forall(0, List(Star), TGen(0, 0) fn TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(0, 0)))) +
+                (ModuleId("ModuleA", "DataA1") -> Forall(1, List(Star), TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TGen(1, 0)))) +
                 (ModuleId("ModuleB", "DataB") -> TCon(ModuleId("ModuleB", "TypeB"), Star))
         defs.tcs should be === testDefs.tcs +
                 (ModuleId("ModuleA", "ClassA") -> TypeclassDef(ModuleId("ModuleA", "ClassA"), List(), List(TVar("a", Star)), Set("cmemberA"), Set())) +
@@ -104,8 +100,8 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                 (ModuleId("ModuleA", "ClassA") -> List(Inst("ModuleA", List(IsIn(ModuleId("ModuleA", "ClassA"), List(TVar("a", Star)))), IsIn(ModuleId("ModuleA", "ClassA"), List(TAp(TCon(ModuleId("ModuleA", "TypeA"), Kfun(Star, Star)), TVar("a", Star))))))) +
                 (ModuleId("ModuleB", "ClassB") -> List(Inst("ModuleB", List(), IsIn(ModuleId("ModuleB", "ClassB"), List(TCon(ModuleId("ModuleB", "TypeB"), Star))))))
         defs.mts should be === testDefs.mts +
-                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(cmemberAFI, 0)))), Forall(cmemberAFI, List(Star), TGen(cmemberAFI, 0) fn TGen(cmemberAFI, 0)))) +
-                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(cmemberBFI, 0)))), Forall(cmemberBFI, List(Star), TGen(cmemberBFI, 0) fn TGen(cmemberBFI, 0))))
+                (ModuleId("ModuleA", "cmemberA") -> Qual(List(IsIn(ModuleId("ModuleA", "ClassA"), List(TGen(2, 0)))), Forall(2, List(Star), TGen(2, 0) fn TGen(2, 0)))) +
+                (ModuleId("ModuleB", "cmemberB") -> Qual(List(IsIn(ModuleId("ModuleB", "ClassB"), List(TGen(3, 0)))), Forall(3, List(Star), TGen(3, 0) fn TGen(3, 0))))
 
         val testMis = testDefs.mis +
                 (ModuleId("ModuleA", "memberA") -> FunctionExpr(Argument("x"), ValueReadExpr(LocalId("x")))) +
@@ -128,7 +124,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map("A" -> ModuleId("Prelude", "A")), Map.empty, Map.empty, Map.empty)))
         val dtd = ASTDataType("A", Nil, Nil)
         evaluating {
-            v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+            v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         } should produce [NamespaceError]
     }
 
@@ -136,7 +132,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup(Map.empty, Map("B" -> ModuleId("Prelude", "B")), Map.empty, Map.empty)))
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
         evaluating {
-            v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+            v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         } should produce [NamespaceError]
     }
 
@@ -144,7 +140,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, Nil)
         evaluating {
-            v.addDataTypeDefs(Seq(
+            v.addDataTypeDefs(TIEnv.empty, Seq(
                 "Test" -> dtd,
                 "Test" -> dtd), nullDefs)
         } should produce [ModuleDuplicateDefinition]
@@ -155,7 +151,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         Given("a duplicate dcon in the same definition")
         val v1 = new ModuleVerifier(nullScopes)
         evaluating {
-            v1.addDataTypeDefs(Seq(
+            v1.addDataTypeDefs(TIEnv.empty, Seq(
                 "Test" -> ASTDataType("A", Nil, List(ASTDataCon("Aa", Nil), ASTDataCon("Aa", Nil)))
             ), nullDefs)
         } should produce [ModuleDuplicateDefinition]
@@ -163,7 +159,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         Given("a duplicate dcon in different definitions")
         val v2 = new ModuleVerifier(nullScopes)
         evaluating {
-            v2.addDataTypeDefs(Seq(
+            v2.addDataTypeDefs(TIEnv.empty, Seq(
                 "Test" -> ASTDataType("A1", Nil, List(ASTDataCon("Aa", Nil))),
                 "Test" -> ASTDataType("A2", Nil, List(ASTDataCon("Aa", Nil)))
             ), nullDefs)
@@ -173,21 +169,21 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "handle type constructors without type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, Nil)
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         defs.tcons should be === nullDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
     }
 
     it should "handle type constructors with type variables" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), Nil)
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         defs.tcons should be === nullDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))))
     }
 
     it should "handle data constructors with no arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
     }
 
@@ -197,7 +193,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataType("A", Nil, Nil)
         val dtd2 = ASTDataType("B", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> (tA fn tB))
@@ -209,7 +205,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
             .addTCon("B", ModuleId("Test", "B"))))
         val dtd1 = ASTDataType("A", Nil, List(ASTDataCon("A", List(ASTTypeCon("B")))))
         val dtd2 = ASTDataType("B", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd1, "Test" -> dtd2), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         val tB = TCon(ModuleId("Test", "B"), Star)
         defs.dcons should be === nullDefs.dcons +
@@ -221,7 +217,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty
             .addTCon("A", ModuleId("Test", "A"))))
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", List(ASTTypeCon("A")))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
         val tA = TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> (tA fn tA))
     }
@@ -229,40 +225,37 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "handle data constructors with quantified type variable arguments" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), List(ASTDataCon("B", List(ASTTypeVar("p"), ASTTypeVar("q")))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        val fi = Type.lastForallId
-        val fa = Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1))))
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
+        val fa = Forall(0, List(Star, Star), TGen(0, 0) fn (TGen(0, 1) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Star, Kfun(Star, Star))), TGen(0, 0)), TGen(0, 1))))
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "infer the kind of type variables based upon their usage in data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", List("p", "q"), List(ASTDataCon("B", List(ASTTypeApply(ASTTypeVar("p"), List(ASTTypeVar("q")))))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        val fi = Type.lastForallId
-        val fa = Forall(fi, List(Kfun(Star, Star), Star), TAp(TGen(fi, 0), TGen(fi, 1)) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star))), TGen(fi, 0)), TGen(fi, 1)))
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
+        val fa = Forall(0, List(Kfun(Star, Star), Star), TAp(TGen(0, 0), TGen(0, 1)) fn TAp(TAp(TCon(ModuleId("Test", "A"), Kfun(Kfun(Star, Star), Kfun(Star, Star))), TGen(0, 0)), TGen(0, 1)))
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "throw an error if the kind of type variables conflicts in the data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("E", List("a", "b"), List(ASTDataCon("X", List(ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))))), ASTDataCon("Y", List(ASTTypeApply(ASTTypeVar("b"), List(ASTTypeVar("a")))))))
-        evaluating { v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs) } should produce [KindConflictError]
+        evaluating { v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs) } should produce [KindConflictError]
     }
 
     it should "handle forall usage in data constructors" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", List(ASTForall(List("a"), ASTTypeVar("a"))))))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), nullDefs)
-        val fi = Type.lastForallId
-        val fa = Forall(fi, List(Star), TGen(fi, 0)) fn TCon(ModuleId("Test", "A"), Star)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), nullDefs)
+        val fa = Forall(0, List(Star), TGen(0, 0)) fn TCon(ModuleId("Test", "A"), Star)
         defs.dcons should be === nullDefs.dcons + (ModuleId("Test", "B") -> fa)
     }
 
     it should "extend the tcons and dcons in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(nullScopes)
         val dtd = ASTDataType("A", Nil, List(ASTDataCon("B", Nil)))
-        val defs = v.addDataTypeDefs(Seq("Test" -> dtd), testDefs)
+        val (_, defs) = v.addDataTypeDefs(TIEnv.empty, Seq("Test" -> dtd), testDefs)
         defs.tcons should be === testDefs.tcons + (ModuleId("Test", "A") -> TCon(ModuleId("Test", "A"), Star))
         defs.dcons should be === testDefs.dcons + (ModuleId("Test", "B") -> TCon(ModuleId("Test", "A"), Star))
         defs.tcs should be === testDefs.tcs
@@ -514,7 +507,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the typeclass is not in scope" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Foof", Nil, List(ASTTypeCon("X")), Nil)
             ), testDefs)
         } should produce [UnknownTypeclassError]
@@ -523,7 +516,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the typeclass is provided the wrong number of types" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X"), ASTTypeCon("X")), Nil)
             ), testDefs)
         } should produce [TypeclassArityError]
@@ -532,7 +525,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the typeclass is provided types of the wrong kinds" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X1")), Nil)
             ), testDefs)
         } should produce [TypeclassIllegalParameterError]
@@ -541,7 +534,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the typeclass is provided non-concrete types" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeVar("a")), Nil)
             ), testDefs)
         } should produce [TypeclassIllegalParameterError]
@@ -550,7 +543,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the instance provides a duplicate implementation for a member" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
                     ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x"))),
                     ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
@@ -562,7 +555,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the instance implements members that were not defined in the typeclass" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
                     ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x"))),
                     ASTClassMemberImpl("hwaet", ASTFunction(List("x"), ASTValueRead("x")))
@@ -574,7 +567,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the instance does not implement all the members defined in the typeclass" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.addTypeclassInstances(Seq(
+            v.addTypeclassInstances(TIEnv.empty, Seq(
                 "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), Nil)
             ), testDefs)
         } should produce [InstanceIncompleteError]
@@ -582,7 +575,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "produce typeclass instances" in {
         val v = new ModuleVerifier(testScopes)
-        val defs = v.addTypeclassInstances(Seq(
+        val (_, defs) = v.addTypeclassInstances(TIEnv.empty, Seq(
             "Test" -> ASTClassInst("Y", Nil, List(ASTTypeCon("X")), List(
                 ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
             ))
@@ -594,7 +587,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "produce typeclass instances defined with extended context" in {
         val v = new ModuleVerifier(testScopes)
-        val defs = v.addTypeclassInstances(Seq(
+        val (_, defs) = v.addTypeclassInstances(TIEnv.empty, Seq(
             "Test" -> ASTClassInst("Y", List(ASTClassRef("Y", List("a"))), List(ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))), List(
                 ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
             ))
@@ -609,7 +602,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "extend the tcis in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
-        val defs = v.addTypeclassInstances(Seq(
+        val (_, defs) = v.addTypeclassInstances(TIEnv.empty, Seq(
             "Test" -> ASTClassInst("Y", List(ASTClassRef("Y", List("a"))), List(ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))), List(
                 ASTClassMemberImpl("yfn", ASTFunction(List("x"), ASTValueRead("x")))
             ))
@@ -638,7 +631,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the name of a member conflicts with an imported definition" in {
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.empty.addMember("fn", ModuleId("Prelude", "fn"))))
         evaluating {
-            v.addMemberDefs(Seq(
+            v.addMemberDefs(TIEnv.empty, Seq(
                 "Test" -> ASTDef("fn", ASTQType(Nil, ASTTypeCon("Unit")))
             ), nullDefs)
         } should produce [NamespaceError]
@@ -648,7 +641,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val v = new ModuleVerifier(Map("Test" -> DefinitionsLookup.defaults))
         val defs = ModuleDefinitions.defaults
         evaluating {
-            v.addMemberDefs(Seq(
+            v.addMemberDefs(TIEnv.empty, Seq(
                 "Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("Unit"))),
                 "Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("Unit")))), defs)
         } should produce [ModuleDuplicateDefinition]
@@ -656,7 +649,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "extend the mts in the definitions list and leave all existing values unchanged" in {
         val v = new ModuleVerifier(testScopes)
-        val defs = v.addMemberDefs(Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
+        val (_, defs) = v.addMemberDefs(TIEnv.empty, Seq("Test" -> ASTDef("A", ASTQType(Nil, ASTTypeCon("X")))), testDefs)
         defs.tcons should be === testDefs.tcons
         defs.dcons should be === testDefs.dcons
         defs.tcs should be === testDefs.tcs
@@ -680,7 +673,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
         val defs = v.addTypeclassDefs(Seq("Test" -> c), nullDefs)
         evaluating {
-            v.addTypeclassMemberDefs(Seq("Test" -> c), defs)
+            v.addTypeclassMemberDefs(TIEnv.empty, Seq("Test" -> c), defs)
         } should produce [NamespaceError]
     }
 
@@ -689,10 +682,10 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
                 .addClass("C", ModuleId("Test", "C"))
                 .addMember("z", ModuleId("Test", "z"))))
         val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
-        val defs0 = v.addMemberDefs(Seq("Test" -> ASTDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))), nullDefs)
+        val (_, defs0) = v.addMemberDefs(TIEnv.empty, Seq("Test" -> ASTDef("z", ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))), nullDefs)
         val defs1 = v.addTypeclassDefs(Seq("Test" -> c), defs0)
         evaluating {
-            v.addTypeclassMemberDefs(Seq("Test" -> c), defs1)
+            v.addTypeclassMemberDefs(TIEnv.empty, Seq("Test" -> c), defs1)
         } should produce [ModuleDuplicateDefinition]
     }
 
@@ -702,12 +695,11 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("ccc",
             ASTQType(List(ASTClassRef("Y", List("b"))), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("b"), ASTTypeVar("a")))))))
         val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
-        val defs1 = v.addTypeclassMemberDefs(Seq("Test" -> c), defs0)
-        val fi = Type.lastForallId
+        val (_, defs1) = v.addTypeclassMemberDefs(TIEnv.empty, Seq("Test" -> c), defs0)
         defs1.mts(ModuleId("Test", "ccc")) should be === Qual(List(
-            IsIn(ModuleId("Test", "C"), List(TGen(fi, 0))),
-            IsIn(ModuleId("Test", "Y"), List(TGen(fi, 1)))),
-                Forall(fi, List(Star, Star), TGen(fi, 0) fn (TGen(fi, 1) fn TGen(fi, 0))))
+            IsIn(ModuleId("Test", "C"), List(TGen(0, 0))),
+            IsIn(ModuleId("Test", "Y"), List(TGen(0, 1)))),
+                Forall(0, List(Star, Star), TGen(0, 0) fn (TGen(0, 1) fn TGen(0, 0))))
     }
 
     it should "throw an error if a member has additional typeclass predicates that cause a kind mismatch" in {
@@ -718,7 +710,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
             ASTClassMemberDef("ccc", ASTQType(List(ASTClassRef("Y2", List("a", "c"))), ASTFunctionType(List(ASTTypeApply(ASTTypeVar("a"), List(ASTTypeVar("b"))), ASTTypeVar("c"), ASTTypeVar("c")))))))
 
         val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
-        evaluating { v.addTypeclassMemberDefs(Seq("Test" -> c), defs0) } should produce [KindMismatchError]
+        evaluating { v.addTypeclassMemberDefs(TIEnv.empty, Seq("Test" -> c), defs0) } should produce [KindMismatchError]
     }
 
     it should "extend the mts in the definitions list and leave all existing values unchanged" in {
@@ -727,14 +719,13 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
         val c = ASTClass("C", Nil, List("a"), List(ASTClassMemberDef("ccc",
             ASTQType(Nil, ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))))))
         val defs0 = v.addTypeclassDefs(Seq("Test" -> c), testDefs)
-        val defs1 = v.addTypeclassMemberDefs(Seq("Test" -> c), defs0)
-        val fi = Type.lastForallId
+        val (_, defs1) = v.addTypeclassMemberDefs(TIEnv.empty, Seq("Test" -> c), defs0)
         defs1.tcons should be === defs0.tcons
         defs1.dcons should be === defs0.dcons
         defs1.tcs should be === defs0.tcs
         defs1.tcis should be === defs0.tcis
-        defs1.mts should be === defs0.mts + (ModuleId("Test", "ccc") -> Qual(List(IsIn(ModuleId("Test", "C"), List(TGen(fi, 0)))),
-            Forall(fi, List(Star), TGen(fi, 0) fn TGen(fi, 0))))
+        defs1.mts should be === defs0.mts + (ModuleId("Test", "ccc") -> Qual(List(IsIn(ModuleId("Test", "C"), List(TGen(0, 0)))),
+            Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0))))
         defs1.mis.size should be === defs0.mis.size
         (defs1.mis zip defs0.mis) foreach { case ((k1, v1), (k2, v2)) =>
             k1 should be === k2
@@ -749,7 +740,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if there are implementations missing for defined members" in {
         val v = new ModuleVerifier(testScopes)
         val mds = Seq("Test" -> new ASTDef("member", ASTQType(Nil, ASTTypeCon("X"))))
-        val defs = v.addMemberDefs(mds, testDefs)
+        val (_, defs) = v.addMemberDefs(TIEnv.empty, mds, testDefs)
         evaluating {
             v.addMemberImplementations(Nil, mds, defs)
         } should produce [ModuleMissingImplementationError]
@@ -859,7 +850,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if any of the referenced types are not in scope" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.getMemberType(
+            v.getMemberType(TIEnv.empty,
                 ModuleId("Test", "a"),
                 ASTQType(Nil, ASTTypeCon("Nonexist")),
                 testDefs)
@@ -869,7 +860,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if any of the qualified type variables are not reachable in the type" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.getMemberType(
+            v.getMemberType(TIEnv.empty,
                 ModuleId("Test", "a"),
                 ASTQType(List(ASTClassRef("Y", List("a"))), ASTTypeCon("X")),
                 testDefs)
@@ -878,23 +869,22 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "construct a qualified type from the AST for a type" in {
         val v = new ModuleVerifier(testScopes)
-        v.getMemberType(
+        v.getMemberType(TIEnv.empty,
             ModuleId("Test", "a"),
             ASTQType(Nil, ASTTypeCon("X")),
-            testDefs) should be ===
+            testDefs)._2 should be ===
         Qual(Nil, TCon(ModuleId("Test", "X"), Star))
     }
 
     it should "construct a qualified type from the AST for a type with predicates" in {
         val v = new ModuleVerifier(testScopes)
-        val qt = v.getMemberType(
+        val qt = v.getMemberType(TIEnv.empty,
             ModuleId("Test", "a"),
             ASTQType(List(ASTClassRef("Y", List("a"))), ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))),
-            testDefs)
-        val fi = Type.lastForallId
+            testDefs)._2
         qt should be === Qual(List(
-            IsIn(ModuleId("Test", "Y"), List(TGen(fi, 0)))),
-            Forall(fi, List(Star), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TGen(fi, 0))))
+            IsIn(ModuleId("Test", "Y"), List(TGen(0, 0)))),
+            Forall(0, List(Star), TAp(TCon(ModuleId("Test", "X1"), Kfun(Star, Star)), TGen(0, 0))))
     }
 
     it should "throw an error if type variables declared by forall have overlapping names" in {
@@ -902,7 +892,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
         Given("a type where the name overlap occurs by shadowing")
         evaluating {
-            v.getMemberType(
+            v.getMemberType(TIEnv.empty,
                 ModuleId("Test", "a"),
                 ASTQType(Nil, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeVar("a")))),
                 testDefs)
@@ -910,7 +900,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
         Given("a type where the name appears in parallel foralls")
         evaluating {
-            v.getMemberType(
+            v.getMemberType(TIEnv.empty,
                 ModuleId("Test", "a"),
                 ASTQType(Nil, ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeVar("b")))),
                 testDefs)
@@ -919,13 +909,12 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "allow qualification of variables that appear in an inner forall" in {
         val v = new ModuleVerifier(testScopes)
-        val qt = v.getMemberType(
+        val qt = v.getMemberType(TIEnv.empty,
             ModuleId("Test", "a"),
             ASTQType(List(ASTClassRef("Y", List("a"))), ASTFunctionType(List(ASTForall(List("a"), ASTFunctionType(List(ASTTypeVar("a"), ASTTypeVar("a")))), ASTTypeCon("X")))),
-            testDefs)
-        val fi = Type.lastForallId
-        qt should be === Qual(List(IsIn(ModuleId("Test", "Y"), List(TGen(fi, 0)))),
-            Forall(fi, List(Star), TGen(fi, 0) fn TGen(fi, 0)) fn TCon(ModuleId("Test", "X"), Star))
+            testDefs)._2
+        qt should be === Qual(List(IsIn(ModuleId("Test", "Y"), List(TGen(0, 0)))),
+            Forall(0, List(Star), TGen(0, 0) fn TGen(0, 0)) fn TCon(ModuleId("Test", "X"), Star))
     }
 
     // ------------------------------------------------------------------------
@@ -935,7 +924,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the type has parameters applied but does not accept parameters" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.lookupInstanceParamType(
+            v.lookupInstanceParamType(TIEnv.empty,
                 testScopes("Test").tcons,
                 testDefs.tcons,
                 ASTTypeApply(ASTTypeCon("X"), List(ASTTypeVar("a"))))
@@ -945,7 +934,7 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
     it should "throw an error if the type has too many parameters applied" in {
         val v = new ModuleVerifier(testScopes)
         evaluating {
-            v.lookupInstanceParamType(
+            v.lookupInstanceParamType(TIEnv.empty,
                 testScopes("Test").tcons,
                 testDefs.tcons,
                 ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a"), ASTTypeVar("b"))))
@@ -954,10 +943,10 @@ class ModuleVerifierTests extends FlatSpec with TapNodeEquality with GivenWhenTh
 
     it should "construct a type for a typeclass instance parameter" in {
         val v = new ModuleVerifier(testScopes)
-        v.lookupInstanceParamType(
+        v.lookupInstanceParamType(TIEnv.empty,
             testScopes("Test").tcons,
             testDefs.tcons,
-            ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a")))) should be ===
+            ASTTypeApply(ASTTypeCon("X1"), List(ASTTypeVar("a"))))._2 should be ===
         TAp(testDefs.tcons(ModuleId("Test", "X1")), TVar("a", Star))
     }
 }
