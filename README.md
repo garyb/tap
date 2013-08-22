@@ -8,9 +8,9 @@ target is Javascript, but will probably also produce code for the JVM at some
 point. 
 
 The language is no where near as advanced as Haskell and never will be. It's 
-pretty much Haskell98 + multi-parameter type classes + functional dependencies 
-+ rank n types, although the typeclass system will differ a little from 
-Haskell's.
+pretty much Haskell98 + multi-parameter type classes + functional 
+dependencies + rank n types, although the typeclass system will differ a little 
+from Haskell's.
 
 The language syntax is currently based on s-expressions, but that may change in
 the future.
