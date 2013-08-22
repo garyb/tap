@@ -10,11 +10,15 @@ import language.implicitConversions
 import language.reflectiveCalls
 
 sealed trait Type
-case class TVar(id: String, k: Kind) extends Type
-case class TCon(id: ModuleId, k: Kind) extends Type
-case class TAp(f: Type, a: Type) extends Type
-case class TGen(fi: Int, i: Int) extends Type
 case class Forall(i: Int, ks: List[Kind], t: Type) extends Type
+case class TAp(f: Type, a: Type) extends Type
+case class TCon(id: ModuleId, k: Kind) extends Type
+case class TVar(tv: Tyvar) extends Type
+case class MetaTv(i: Int, var ref: Some[Type]) extends Type
+
+sealed trait Tyvar
+case class BoundTv(id: String) extends Tyvar
+case class SkolemTv(name: String, id: Int) extends Tyvar
 
 object Type {
 
