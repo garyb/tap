@@ -50,7 +50,44 @@ case class TIEnv(uniq: Int, env: Map[String, Type], ets: TypeInference.ExprTypeM
 
     def getEnvTypes: (TIEnv, List[Type]) = (this, env.values.toList)
 
+    private def isValidType(t: Type): Boolean = t match {
+        case TVar(_: BoundTv) => false
+        case _ => true
+    }
 
+    def unify(x: Type, y: Type, src: FilePositional): TIEnv = {
+        assert(isValidType(x), "bad type " + x)
+        assert(isValidType(y), "bad type " + x)
+        (x, y) match {
+            case (tv1: TVar, tv2: TVar) if tv1 == tv2 => this
+            case (tv1: MetaTv, tv2: MetaTv) if tv1 == tv2 => this
+            case (tc1: TCon, tc2: TCon) if tc1 == tc2 => this
+            case (MetaTv(tv), t) => unifyVar(tv, t, src)
+            case (t, MetaTv(tv)) => unifyVar(tv, t, src)
+            case (TAp(x1, y1), TAp(x2, y2)) => unify(x1, x2, src).unify(y1, y2, src)
+            case _ => throw new TIError("could not unify types", src)
+        }
+    }
+
+    def unifyVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = tv1.ref match {
+        case Some(t1) => unify(t1, t2, src)
+        case None => unifyUnboundVar(tv1, t2, src)
+    }
+
+    def unifyUnboundVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = t2 match {
+        case MetaTv(tv2) =>
+            tv2.ref match {
+                case Some(tv2a) => unify(MetaTv(tv1), tv2a, src)
+                case None =>
+                    tv1.ref = Some(t2)
+                    this
+            }
+        case t2 =>
+            val tvs2 = Type.getMetaTyVars(List(t2))
+            if (tvs2 contains tv1) throw TIError("Occurs check failed for " + tv1 + " in " + t2, src)
+            tv1.ref = Some(t2)
+            this
+    }
 
 }
 
