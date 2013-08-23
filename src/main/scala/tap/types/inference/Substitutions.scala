@@ -5,7 +5,7 @@ import tap.types.classes.{Qual, IsIn}
 
 object Substitutions {
 
-    type Subst = Map[Tyvar, Type]
+    type Subst = Map[TyVar, Type]
 
     def nullSubst: Subst = Map.empty
 
@@ -19,7 +19,7 @@ object Substitutions {
         case t => t
     }
 
-    def applySubst(tvs: List[Tyvar], ts: List[Type], t: Type): Type = applySubst((tvs zip ts).toMap, t)
+    def applySubst(tvs: List[TyVar], ts: List[Type], t: Type): Type = applySubst((tvs zip ts).toMap, t)
 
     /**
      * Applies a substitution to a predicated type.

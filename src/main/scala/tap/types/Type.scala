@@ -11,18 +11,18 @@ import language.implicitConversions
 import language.reflectiveCalls
 
 sealed trait Type
-case class Forall(tvs: List[Tyvar], t: Type) extends Type
+case class Forall(tvs: List[TyVar], t: Type) extends Type
 case class TAp(f: Type, a: Type) extends Type
 case class TCon(id: ModuleId, k: Kind) extends Type
-case class TVar(tv: Tyvar) extends Type { def id: String = tv.id }
+case class TVar(tv: TyVar) extends Type { def id: String = tv.id }
 case class MetaTv(m: Meta) extends Type
 
-sealed trait Tyvar {
+sealed trait TyVar {
     def id: String
     def k: Kind
 }
-case class BoundTv(id: String, k: Kind) extends Tyvar
-case class SkolemTv(id: String, i: Int, k: Kind) extends Tyvar
+case class BoundTv(id: String, k: Kind) extends TyVar
+case class SkolemTv(id: String, i: Int, k: Kind) extends TyVar
 
 case class Meta(i: Int, k: Kind, var ref: Option[Type])
 
@@ -31,29 +31,29 @@ object Type {
     /**
      * Get the MetaTvs from a type.
      */
-    def metaTvs(ts: List[Type]): List[MetaTv] = {
-        ts.flatMap(tv).distinct
+    def getMetaTyVars(ts: List[Type]): List[MetaTv] = {
+        (ts map zonkType flatMap tv).distinct
     }
 
     /**
      * Get the free TyVars from a type.
      */
-    def freeTyVars(ts: List[Type]): Set[Tyvar] = {
-        def go(bound: Set[Tyvar], t: Type, acc: Set[Tyvar]): Set[Tyvar] = t match {
+    def getFreeTyVars(ts: List[Type]): Set[TyVar] = {
+        def go(bound: Set[TyVar], t: Type, acc: Set[TyVar]): Set[TyVar] = t match {
             case Forall(tvs, t) => go(bound ++ tvs, t, acc)
             case TAp(x, y) => go(bound, x, go(bound, y, acc))
             case TVar(tv) if !(bound contains tv) => acc + tv
             case _ => acc
         }
-        ts.foldRight(Set.empty[Tyvar])(go(Set.empty, _, _))
+        (ts map zonkType).foldRight(Set.empty[TyVar])(go(Set.empty, _, _))
     }
 
     /**
      * Get all the binders used in ForAlls in the type, so that when quantifying an outer for-all we can avoid these
      * inner ones.
      */
-    def tyVarBndrs(t: Type): Set[Tyvar] = {
-        def bndrs(t: Type, acc: Set[Tyvar]): Set[Tyvar] = {
+    def tyVarBndrs(t: Type): Set[TyVar] = {
+        def bndrs(t: Type, acc: Set[TyVar]): Set[TyVar] = {
             case Forall(tvs, t) => bndrs(t, acc ++ tvs)
             case TAp(x, y) => bndrs(x, bndrs(y, acc))
         }
@@ -151,7 +151,7 @@ object Type {
         val usedBndrs = tyVarBndrs(t) map { tv => tv.id }
         val newBnds = allBinders filterNot usedBndrs.contains take vs.length
 
-        def bind(tv: MetaTv, name: String): Tyvar = {
+        def bind(tv: MetaTv, name: String): TyVar = {
             val btv = BoundTv(name, tv.m.k)
             tv.m.ref = Some(TVar(btv))
             btv
