@@ -7,8 +7,9 @@ import tap.types.kinds.Kind
 import tap.types._
 import tap.util.ContextOps._
 import language.reflectiveCalls
+import tap.Id
 
-case class TIEnv(uniq: Int, env: Map[String, Type], ets: TypeInference.ExprTypeMap) {
+case class TIEnv(uniq: Int, env: Map[Id, Type], ets: TypeInference.ExprTypeMap) {
 
     def withCtx[A, B](c: (TIEnv, A), fn: A => B): (TIEnv, B) = (c._1, fn(c._2))
 
@@ -46,7 +47,10 @@ case class TIEnv(uniq: Int, env: Map[String, Type], ets: TypeInference.ExprTypeM
         case t => (this, Nil, t)
     }
 
-    def lookupVar(name: String): Type = env(name)
+    def lookupVar(id: Id): Type = env(id)
+    def extendVarEnv[A](id: Id, t: Type, fn: TIEnv => A): (TIEnv, A) = {
+        (this, fn(copy(env = env + (id -> t))))
+    }
 
     def getEnvTypes: (TIEnv, List[Type]) = (this, env.values.toList)
 
