@@ -15,14 +15,29 @@ object Kind {
      * Finds the kind of a type.
      */
     def kind(t: Type): Kind = t match {
-        case TVar(_, k) => k
-        case TCon(_, k) => k
-        case Forall(_, _, t) => kind(t)
+        case Forall(_, t) => kind(t)
         case TAp(t, _) => kind(t) match {
             case Kfun(_, k) => k
             case _ => throw new Error("kind * found on TAp type")
         }
-        case _: TGen => throw new Error("kind called on TGen")
+        case TCon(_, k) => k
+        case TVar(tv) => kind(tv)
+        case MetaTv(m) => kind(m)
+    }
+
+    /**
+     * Finds the kind of a type variable.
+     */
+    def kind(tv: TyVar): Kind = tv match {
+        case BoundTv(_, k) => k
+        case SkolemTv(_, _, k) => k
+    }
+
+    /**
+     * Finds the kind of a meta type variable.
+     */
+    def kind(m: Meta): Kind = m match {
+        case Meta(_, k, _) => k
     }
 
     @tailrec final def arity(k: Kind, depth: Int = 0): Int = k match {

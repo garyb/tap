@@ -96,6 +96,11 @@ object PrettyPrint {
         else prettyPrint(qt.h)
     }
 
+    def prettyPrint(m: Meta): String = {
+        case Meta(i, k, None) => "<" + i + ">"
+        case Meta(i, k, Some(t)) => "<" + i + ":" + prettyPrint(t)  + ">"
+    }
+
     /**
      * Takes a type and returns a pretty-printed string representation for it.
      */

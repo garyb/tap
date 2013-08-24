@@ -4,6 +4,7 @@ import tap.ast.FilePositional
 import tap.ir.TapNode
 import tap.types.classes.Qual
 import tap.types.kinds.Kind
+import tap.types.kinds.Kind._
 import tap.types._
 import tap.util.ContextOps._
 import language.reflectiveCalls
@@ -69,13 +70,16 @@ case class TIEnv(uniq: Int, env: Map[Id, Type], ets: TypeInference.ExprTypeMap) 
             case (MetaTv(tv), t) => unifyVar(tv, t, src)
             case (t, MetaTv(tv)) => unifyVar(tv, t, src)
             case (TAp(x1, y1), TAp(x2, y2)) => unify(x1, x2, src).unify(y1, y2, src)
-            case _ => throw new TIError("could not unify types", src)
+            case _ => throw TIUnifyError(x, y, src)
         }
     }
 
-    def unifyVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = tv1.ref match {
-        case Some(t1) => unify(t1, t2, src)
-        case None => unifyUnboundVar(tv1, t2, src)
+    def unifyVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = {
+        if (kind(tv1) != kind(t2)) throw TIUnifyKindError(tv1, t2, src)
+        tv1.ref match {
+            case Some(t1) => unify(t1, t2, src)
+            case None => unifyUnboundVar(tv1, t2, src)
+        }
     }
 
     def unifyUnboundVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = t2 match {
