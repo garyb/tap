@@ -1,104 +1,173 @@
 package tap.types.inference
 
-import tap.ast.FilePositional
 import tap.ir.TapNode
 import tap.types.classes.Qual
-import tap.types.kinds.Kind
+import tap.types.kinds.{Star, Kind}
 import tap.types.kinds.Kind._
+import tap.types.classes.ClassEnvironments.ClassEnv
 import tap.types._
 import tap.util.ContextOps._
 import language.reflectiveCalls
-import tap.Id
 
-case class TIEnv(uniq: Int, env: Map[Id, Type], ets: TypeInference.ExprTypeMap) {
+case class TIEnv(uniq: Int, subst: Map[Meta, Type], ce: ClassEnv, ntm: Map[TapNode, Qual[Type]]) {
 
     def withCtx[A, B](c: (TIEnv, A), fn: A => B): (TIEnv, B) = (c._1, fn(c._2))
 
+    // ---[ substitutions ]----------------------------------------------------
+
+    def applySubst(t: Type): Type = t match {
+        case MetaTv(m) => subst.getOrElse(m, t)
+        case _ => t
+    }
+
+    def substTv(tvs: List[TyVar], ts: List[Type], t: Type) =
+        Substitutions.applySubst(tvs, ts, t)
+
+    // ---[ type variables ]---------------------------------------------------
+
+    def newTvar(k: Kind): (TIEnv, Type) =
+        withCtx(newMetaTvar(k), { m: Meta => MetaTv(m) })
+
+    def newMetaTvar(k: Kind): (TIEnv, Meta) =
+        withCtx(newUnique, { i: Int => Meta(i, k) })
+
+    def newSkolemTvar(tv: TyVar): (TIEnv, TyVar) =
+        withCtx(newUnique, { i: Int => SkolemTv(tv.id, i, tv.k) })
+
+    def readTv(m: Meta): Option[Type] = subst.get(m)
+    def writeTv(m: Meta, t: Type): TIEnv = copy(subst = subst + (m -> t))
+
     def newUnique: (TIEnv, Int) = (copy(uniq = uniq + 1), uniq)
 
-    //def unify(x: Type, y: Type, src: FilePositional): TIEnv = copy(s = Unify.unify(x, y, s, src))
-    def setNodeType(n: TapNode, qt: Qual[Type]): TIEnv = copy(ets = ets + (n -> qt))
-    def setNodeType(n: TapNode, t: Type): TIEnv = setNodeType(n, Qual(Nil, t))
+    // ---[ instantiation ]----------------------------------------------------
 
-    def newTvar(k: Kind): (TIEnv, Type) = withCtx(newMetaTvar(k), { m: Meta => MetaTv(m) })
-    def newMetaTvar(k: Kind): (TIEnv, Meta) = withCtx(newUnique, { i: Int => Meta(i, k, None) })
-    def newSkolemTvar(tv: TyVar): (TIEnv, TyVar) = withCtx(newUnique, { i: Int => SkolemTv(tv.id, i, tv.k) })
+    def instantiate(t: Type): (TIEnv, Type) = t match {
+        case Forall(tvs, t) =>
+            val (env1, tvs1) = this.map(tvs map kind) { case (env, k) => env.newMetaTvar(k) }
+            (env1, substTv(tvs, tvs1 map MetaTv.apply, t))
+        case _ => (this, t)
+    }
 
-    /**
-     * Instantiates a universally quantified type, replacing the quantified types with other types.
-     */
-    def inst(t: Type): (TIEnv, Type) = t match {
-        case Forall(vs, t) =>
-            val (env1, vs1) = this.map(vs) { case (env0, tv) => env0.newMetaTvar(tv.k) }
-            (env1, Substitutions.applySubst(vs, vs1 map MetaTv.apply, t))
+    // ---[ skolemisation ]----------------------------------------------------
+
+    def skolemise(t: Type): (TIEnv, List[TyVar], Type) = t match {
+        case Forall(tvs, t) =>
+            val (env1, sks1) = this.map(tvs) { case (env, tv) => env.newSkolemTvar(tv) }
+            val (env2, sks2, t1) = env1.skolemise(substTv(tvs, sks1 map TVar.apply, t))
+            (env2, sks1 ++ sks2, t1)
+        case TFun(x, y) =>
+            val (env1, sks, y1) = skolemise(y)
+            (env1, sks, x fn y1)
+        case _ => (this, Nil, t)
+    }
+
+    // ---[ quantification ]---------------------------------------------------
+
+    def quantify(tvs: List[Meta], t: Type): (TIEnv, Type) = {
+
+        val usedBndrs = Type.tyVarBndrs(t) map { tv => tv.id }
+        val newBnds = allBinders filterNot usedBndrs.contains take tvs.length
+
+        val tvs1 = Type.mtv(t) collect { case v if tvs contains v => v }
+        val (env1, tvs2) = this.map(tvs1 zip newBnds) { case (env0, (m, name)) =>
+            val btv = BoundTv(name, m.k)
+            val env1 = env0.writeTv(m, TVar(btv))
+            (env1, btv)
+        }
+        val (env2, t1) = env1.zonkType(t)
+        (env2, Forall(tvs2, t1))
+    }
+
+    val allBinders = for (i <- Stream.from(0); x <- ('a' to 'z').iterator)
+        yield if (i == 0) x.toString else x.toString + i
+
+    // ---[ free type variables ]----------------------------------------------
+
+    def getMetaTyVars(ts: List[Type]): (TIEnv, List[Meta]) = {
+        val (env1, ts1) = zonkTypes(ts)
+        (env1, (ts1 flatMap Type.mtv).distinct)
+    }
+
+    def getFreeTyVars(ts: List[Type]): (TIEnv, List[TyVar]) = {
+        def find(bound: Set[TyVar], t: Type): List[TyVar] = t match {
+            case Forall(tvs, t) => find(bound ++ tvs, t)
+            case TAp(x, y) => (find(bound, x) ++ find(bound, y)).distinct
+            case TVar(tv) if !(bound contains tv) => List(tv)
+            case _ => Nil
+        }
+        val (env1, ts1) = zonkTypes(ts)
+        val tvs = ts1 flatMap { t => find(Set.empty, t) }
+        (env1, tvs)
+    }
+
+    // ---[ zonking ]----------------------------------------------------------
+
+    def zonkType(t: Type): (TIEnv, Type) = t match {
+        case Forall(ns, t) => withCtx(zonkType(t), t => Forall(ns, t))
+        case TAp(x, y) =>
+            val (ctx1, x1) = zonkType(x)
+            val (ctx2, y1) = ctx1.zonkType(y)
+            (ctx2, TAp(x1, y1))
+        case MetaTv(m) => readTv(m) match {
+            case None => (this, t)
+            case Some(t) =>
+                val (ctx1, t1) = zonkType(t)
+                val ctx2 = ctx1.writeTv(m, t1)
+                (ctx2, t1)
+        }
         case t => (this, t)
     }
 
-    /**
-     * Performs deep skolemisation, returning the skolem constants and newly skolemised type.
-     */
-    def skolemise(t: Type): (TIEnv, List[TyVar], Type) = t match {
-        case Forall(vs, t0) =>
-            val (env1, sks1) = this.map(vs) { case (env0, tv) => env0.newSkolemTvar(tv) }
-            val (env2, sks2, t1) = env1.skolemise(Substitutions.applySubst(vs, sks1 map TVar.apply, t0))
-            (env2, sks1 ++ sks2, t1)
-        case TAp(x, y0) =>
-            val (env1, tvs, y1) = skolemise(y0)
-            (env1, tvs, TAp(x, y1))
-        case t => (this, Nil, t)
+    def zonkTypes(ts: List[Type]): (TIEnv, List[Type]) =
+        this.map(ts) { case (env0, t) => env0.zonkType(t) }
+
+    // ---[ unification ]------------------------------------------------------
+
+    def unify(x: Type, y: Type): TIEnv = (x, y) match {
+        case (TVar(_: BoundTv), _) => throw TIInternalError("Unexpected type in unify " + x)
+        case (_, TVar(_: BoundTv)) => throw TIInternalError("Unexpected type in unify " + y)
+        case (t1, t2) if t1 == t2 => this
+        case (MetaTv(tv), t) => unifyVar(tv, t)
+        case (t, MetaTv(tv)) => unifyVar(tv, t)
+        case (TAp(x1, y1), TAp(x2, y2)) => unify(x1, x2).unify(y1, y2)
+        case _ => throw TIUnifyError(x, y)
     }
 
-    def lookupVar(id: Id): Type = env(id)
-    def extendVarEnv[A](id: Id, t: Type, fn: TIEnv => A): (TIEnv, A) = {
-        (this, fn(copy(env = env + (id -> t))))
-    }
-
-    def getEnvTypes: (TIEnv, List[Type]) = (this, env.values.toList)
-
-    private def isValidType(t: Type): Boolean = t match {
-        case TVar(_: BoundTv) => false
-        case _ => true
-    }
-
-    def unify(x: Type, y: Type, src: FilePositional): TIEnv = {
-        assert(isValidType(x), "bad type " + x)
-        assert(isValidType(y), "bad type " + x)
-        (x, y) match {
-            case (tv1: TVar, tv2: TVar) if tv1 == tv2 => this
-            case (tv1: MetaTv, tv2: MetaTv) if tv1 == tv2 => this
-            case (tc1: TCon, tc2: TCon) if tc1 == tc2 => this
-            case (MetaTv(tv), t) => unifyVar(tv, t, src)
-            case (t, MetaTv(tv)) => unifyVar(tv, t, src)
-            case (TAp(x1, y1), TAp(x2, y2)) => unify(x1, x2, src).unify(y1, y2, src)
-            case _ => throw TIUnifyError(x, y, src)
+    def unifyVar(tv1: Meta, t2: Type): TIEnv = {
+        if (kind(tv1) != kind(t2)) throw TIUnifyKindError(tv1, t2)
+        readTv(tv1) match {
+            case Some(t1) => unify(t1, t2)
+            case None => unifyUnboundVar(tv1, t2)
         }
     }
 
-    def unifyVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = {
-        if (kind(tv1) != kind(t2)) throw TIUnifyKindError(tv1, t2, src)
-        tv1.ref match {
-            case Some(t1) => unify(t1, t2, src)
-            case None => unifyUnboundVar(tv1, t2, src)
-        }
-    }
-
-    def unifyUnboundVar(tv1: Meta, t2: Type, src: FilePositional): TIEnv = t2 match {
+    def unifyUnboundVar(tv1: Meta, t2: Type): TIEnv = t2 match {
         case MetaTv(tv2) =>
-            tv2.ref match {
-                case Some(tv2a) => unify(MetaTv(tv1), tv2a, src)
-                case None =>
-                    tv1.ref = Some(t2)
-                    this
+            readTv(tv2) match {
+                case Some(tv2a) => unify(MetaTv(tv1), tv2a)
+                case None => writeTv(tv1, t2)
             }
         case t2 =>
-            val tvs2 = Type.getMetaTyVars(List(t2))
-            if (tvs2 contains tv1) throw TIError("Occurs check failed for " + tv1 + " in " + t2, src)
-            tv1.ref = Some(t2)
-            this
+            val (env1, tvs) = getMetaTyVars(List(t2))
+            if (tvs contains tv1) throw TIUnifyOccursError(tv1, t2)
+            env1.writeTv(tv1, t2)
     }
 
+    def unifyFun(t: Type): (TIEnv, Type, Type) = t match {
+        case TFun(x, y) => (this, x, y)
+        case t =>
+            val (env1, x) = newTvar(Star)
+            val (env2, y) = env1.newTvar(Star)
+            val env3 = env2.unify(t, x fn y)
+            (env3, x, y)
+    }
+
+    // ---[ node type map ]----------------------------------------------------
+
+    def setNodeType(n: TapNode, qt: Qual[Type]): TIEnv = copy(ntm = ntm + (n -> qt))
+    def setNodeType(n: TapNode, t: Type): TIEnv = setNodeType(n, Qual(Nil, t))
 }
 
 object TIEnv {
-    val empty = TIEnv(0, Map.empty, Map.empty)
+    val empty = TIEnv(0, Map.empty, Map.empty, Map.empty)
 }
